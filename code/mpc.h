@@ -34,53 +34,6 @@ struct geometry
 typedef struct geometry Geometry;
 
 
-/*//////////////////////////////////////////*/
-/*-----------------*/
-/* TEST FUNCTIONS  */
-/*-----------------*/
-
-
-
-/*//////////////////////////////////////////*/
-/* This tests whether the given position of a particle is within the lumen */
-/*inline int TEST_particle_in_lumen(Geometry cylinder, double * pos)
-{
-	if(pos[0] > cylinder.Lx || pos[0] < 0. )
-	{
-		return 0;
-	}
-
-	double distance_sq = (pos[1]-cylinder.L_half)*(pos[1]-cylinder.L_half)+(pos[2]-cylinder.L_half)*(pos[2]-cylinder.L_half);
-	double radius_sq = cylinder.radius * cylinder.radius;
-	
-	if( distance_sq >= radius_sq )
-	{
-		//printf("distance: %lf > radius %lf\n",distance_sq, radius_sq);
-		//printf("outside circle!\n");
-		return 0;
-	}
-	
-	return 1;
-}
-
-
-/* Second function of a class of auxiliary tester functions. Not part of the program. Used for debugging *
-inline int TEST_all_particles_in_lumen(int n_part, Geometry cylinder, double ** pos)
-{
-	int i;
-	for(i=0;i<n_part;i++)
-	{
-		if( TEST_particle_in_lumen(cylinder, &(pos[i][0])) )
-		{
-			//do nothing
-		}else{
-			printf("Particle %d outside lumen\n",i);
-			return 0;
-		}
-	}
-	return 1;
-}
-*/
 
 
 /*------------------------------*/

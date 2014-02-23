@@ -7,14 +7,14 @@
 # C compiler and flags; compiler for MPI: mpicc (wrapper, recall NAG course). U
 # GNU compiler: gcc. Load modules for Intel (icc) and PGI
 CC = gcc
-CFLAGS = -O3 -Wall -Wextra -Wundef -Wshadow -Wstrict-overflow=5 -Winline #-Wfloat-equal
+CFLAGS = -O3 -Wall -Wextra -Wundef -Wshadow -Wstrict-overflow=5 -Winline #-fno-inline -pg #-Wfloat-equal
 INC = -I.
 
 # Command to use for linking and executable
 # LD=mpicc   # use this for MPI
 # LD is the linker. EXE is the name of the executable that will be created when linking the files 
 LD = gcc 
-LDFLAGS = -lm -lgsl -lgslcblas # Include the maths library. For MPI, possibly: -lpng -nofor-main
+LDFLAGS = -lm -lgsl -lgslcblas #-pg # Include the maths library. For MPI, possibly: -lpng -nofor-main
 # Executable name
 EXE = mpcSim
 # List of objects

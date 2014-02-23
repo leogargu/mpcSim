@@ -417,16 +417,7 @@ void stream(double dt, const int n_part, const double g, const Geometry cylinder
 	/* Stream all particles a timestep dt */
 	for(i=0; i<n_part; i++) /* For each plasma particle... */
 	{
-	
-		
-		/*if( i==0 )
-		{
-			display = 1; /* display is a global variable *
-		}else{
-			display = 0;
-		}*/
-		
-		
+
 		/* reset counter */
 		count = 0;
 		
@@ -436,23 +427,16 @@ void stream(double dt, const int n_part, const double g, const Geometry cylinder
 		circunf_sq = aux_y*aux_y + aux_z*aux_z;
 	
 		
-		
+		/* This piece of code slows stream.c by 2 orders of magnitude. It is *probably* an unnecessary check
 		if( TEST_all_particles_in_lumen(n_part, cylinder, pos)!=1 )
 		{
 			fprintf(stderr,"stream: Aborting...\n");
 			exit(EXIT_FAILURE);
 		}
+		*/
 		
-		/* this bit of code is duplicated, also appears in TEST_particle_in_lumen*/ 
-		/* If particle is outside the wall beyond the tolerance zone, something went wrong: abort the simulation */
-		//if( circunf_sq >= cylinder.max_sq )// this check probably can be eliminated because vel_verlet also checks <--- TO DO
-		//{
-		//	fprintf(stderr, "A particle escaped beyond the tolerance zone: aborting. ");
-		//	exit(EXIT_FAILURE);	
-			
+		
 		/* FOR PARTICLES IN THE LUMEN */
-		//}else if( circunf_sq < cylinder.min_sq)
-		
 		if (circunf_sq < cylinder.min_sq)
 		{
 			#if TRACKING
@@ -519,11 +503,11 @@ void stream(double dt, const int n_part, const double g, const Geometry cylinder
 					fprintf(fp2,"%.20lf \t",tau);
 				#endif
 		    		
-				//count should be 1 at this point...
+				//(*) count should be 1 at this point...
 				
 				/* Now try to stream from the boundary. */
 		    		count = boundary_fractional_stream(g, pos[i], vel[i], acc[i], cylinder, coeff, dt-tau);
-		    		count++;//...so we correct count here
+		    		count++;//...so we correct count here (*)
 			}else{
 				/* If particle did not escape, it has already been updated by the call to vel_verlet: go to next particle*/
 				 //do nothing
@@ -537,13 +521,6 @@ void stream(double dt, const int n_part, const double g, const Geometry cylinder
 			}
 		/* FOR PARTICLES AT THE BOUNDARY (i.e. WITHIN TOLERANCE ZONE)*/	
 		}else{	
-			/*if( display ) /*display is a global variable *
-			{
-				calculate_coeffs( pos[i], vel[i], acc[i], cylinder, coeff );
-				printf("Coeffs for particle %d: %.14lf + %.14lf t + %.14lf t^2+ %.14lf t^3+ %.14lf t^4\n",i,coeff[0],coeff[1],coeff[2],coeff[3],coeff[4]);
-				printf("Coeffs accounting for tau: %.14lf + %.14lf + %.14lf+ %.14lf + %.14lf\n",coeff[0],coeff[1]*tau,coeff[2]*tau*tau,coeff[3]*tau*tau*tau,coeff[4]*tau*tau*tau*tau);
-
-			}*/
 			count = boundary_fractional_stream(g, pos[i], vel[i], acc[i], cylinder, coeff, dt);
 		}
 		
@@ -556,7 +533,7 @@ void stream(double dt, const int n_part, const double g, const Geometry cylinder
 			fprintf(fp2,"\n");				
 		#endif
 		
-	}/* end for -loop over plasma particles- */
+	}/* end for-loop over plasma particles- */
 		
 		
 	// Now post-process the bounce-back statistics

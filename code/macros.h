@@ -4,8 +4,9 @@
 
 #define VERBOSE 1
 #define DEBUGGING 1
+/* Expots positions, velocities, accelerations and rnd velocities of all particles, to debig the stream-collide alternating algorithm*/
+#define DEBUGGING_STREAMCOLLIDE 0
 #define BINARY_EXPORT 0
-
 #define DEBUGGING_QUARTIC_SOLVER 0   // put this in quartic_solver.h, or change back to DEBUGGING
 
 #define EQN_EPS 1e-5
@@ -25,10 +26,30 @@
 
 #define TIME_EPS 1e-10
 
+/* Exports vtk files for every timestep. These vtk files are snapshots of the simulation, containing positions, velocities 
+and accelerations of all particles. It also exports auxiliary vtk files: collision_grid.vtk and vessel_geometry.vtk */
 #define EXPORT_STATES 0
 
+/* Exports files to do CAM average over a x_slice, ready to plot the parabolic profile of POiseuille flow */
 #define EXPORT_VEL_PROFILE 1
 
+/* Checks, at every timestep, that the instantaneous density at any collision cell is less than DENSITY_TOLxInitial density */
+#define CHECK_COMPRESSIBILITY 1
+#define DENSITY_TOL 10
+
+/* Exports a file, at regular timesteps, containing the temperature in each collision cell. */
+#define CHECK_TEMPERATURE 0
+
+#define CHECK_EQUILIBRATION 0
+
+
+
+
+#if DEBUGGING_STREAMCOLLIDE
+	/* Global file pointer */
+	#include <stdio.h>
+	FILE * debug_fp;
+#endif
 
 
 /* This function checks whether a double is zero. This function is not necessary and its code can be changed
@@ -48,45 +69,6 @@ inline static int is_approx_zero(double x, double eps)
 
 }
 
-/* This tests whether the given position of a particle is within the lumen */
-/*inline int TEST_particle_in_lumen(Geometry cylinder, double * pos)
-{
-	if(pos[0] > cylinder.Lx || pos[0] < 0. )
-	{
-		return 0;
-	}
-
-	double distance_sq = (pos[1]-cylinder.L_half)*(pos[1]-cylinder.L_half)+(pos[2]-cylinder.L_half)*(pos[2]-cylinder.L_half);
-	double radius_sq = cylinder.radius * cylinder.radius;
-	
-	if( distance_sq >= radius_sq )
-	{
-		//printf("distance: %lf > radius %lf\n",distance_sq, radius_sq);
-		//printf("outside circle!\n");
-		return 0;
-	}
-	
-	return 1;
-}
-
-
-/* Second function of a class of auxiliary tester functions. Not part of the program. Used for debugging *
-inline int TEST_all_particles_in_lumen(int n_part, Geometry cylinder, double ** pos)
-{
-	int i;
-	for(i=0;i<n_part;i++)
-	{
-		if( TEST_particle_in_lumen(cylinder, &(pos[i][0])) )
-		{
-			//do nothing
-		}else{
-			printf("Particle %d outside lumen\n",i);
-			return 0;
-		}
-	}
-	return 1;
-}
-*/
 
 #endif /* header guard */
 

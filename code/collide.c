@@ -90,8 +90,8 @@ inline int pos2cell_idx(const Geometry geometry, const double * pos, const doubl
 
 
 /* The collide step does not change the positions of the particles. */
-void collide(const int n_part, const double T, const double m, const double m_inv, Geometry geometry, double * shift, gsl_rng * r, 
-	int * c_p, double * cell_mass ,double ** cell_vel, double ** cell_rnd_vel, double ** pos, double ** vel)
+void collide(const int n_part, const double T, const double m, const double m_inv, Geometry geometry, gsl_rng * r, 
+	int * c_p, double * cell_mass ,double ** cell_vel, double ** cell_rnd_vel, double * shift, double ** pos, double ** vel)
 {
 	/*-------------------------------------------*/
 	/*	STEP 1: variables setup 	     */
@@ -111,7 +111,7 @@ void collide(const int n_part, const double T, const double m, const double m_in
     		}
 	}
 	/* There is no need to reset c_p because it will be changed in the loop below */
-		 	    
+	
 	/*-------------------------------------------*/
 	/*	STEP 2: scan through the particles   */
 	/*-------------------------------------------*/
@@ -126,18 +126,21 @@ void collide(const int n_part, const double T, const double m, const double m_in
 		double rnd_vel[3] ={ gsl_ran_gaussian_ziggurat(r, sqrt(T * m_inv) ) ,
 				     gsl_ran_gaussian_ziggurat(r, sqrt(T * m_inv) ) ,
 			   	     gsl_ran_gaussian_ziggurat(r, sqrt(T * m_inv) ) };    /* zero mean */
-   	   			   	     
+   	   			
+		#if DEBUGGING_STREAMCOLLIDE
+			fprintf(debug_fp,"%lf \t %lf \t %lf \t",rnd_vel[0],rnd_vel[1],rnd_vel[2]);	
+		#endif	   	     
 		/* Get the index of the cell particle i is at */
-		ci = pos2cell_idx( geometry, pos[i], shift ); // canonize is included here, and check of being outside of the cylinder too
-		c_p[i] = ci; /* store the index of the cell that particle i belongs to */
+		c_p[i] = pos2cell_idx( geometry, pos[i], shift ); // canonize is included here, and check of being outside of the cylinder too
+		//c_p[i] = ci; /* store the index of the cell that particle i belongs to */
 				
 		/* Add mass and momentum to that cell */
 		for(j=0; j<3; j++)
 		{
-			cell_vel[ci][j] += m * vel[i][j]; // update momentum of the cell
-			cell_rnd_vel[ci][j] += m * rnd_vel[j]; // update random momentum of the cell
+			cell_vel[c_p[i]][j] += m * vel[i][j]; // update momentum of the cell
+			cell_rnd_vel[c_p[i]][j] += m * rnd_vel[j]; // update random momentum of the cell
 		}
-		cell_mass[ci] += m;
+		cell_mass[c_p[i]] += m;
 				
 		/* assign new velocity to particle: step 1/2 */
 		for(j=0; j<3; j++)
@@ -145,7 +148,22 @@ void collide(const int n_part, const double T, const double m, const double m_in
 			vel[i][j] = rnd_vel[j];
 		}
 	}
-
+	#if DEBUGGING_STREAMCOLLIDE
+		fprintf(debug_fp,"\n");	
+	#endif	
+		#if DEBUGGING_STREAMCOLLIDE
+			int p;
+			for(p=0;p<n_part;p++)
+			{
+				fprintf(debug_fp,"%d \t",c_p[p]);
+			}
+			fprintf(debug_fp,"\n");
+			for(p=0;p<n_cells;p++)
+			{
+				fprintf(debug_fp,"%d \t",(int)(cell_mass[p]*m_inv));
+			}
+			fprintf(debug_fp,"\n");
+		#endif
 	
 	/*-------------------------------------------*/
 	/*	STEP 3: loop over the cells 	     */
