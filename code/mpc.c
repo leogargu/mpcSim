@@ -219,8 +219,8 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 	snprintf(file_name,sizeof(char)*30,"./DATA/velprofile_%d.dat",file_number);
 
 	fp=fopen(file_name,"w");
-	fprintf(fp,"%lf \t %d \t %d \t %d  \n", x_slice, nynz, cylinder.n_cells_dim[2], step);//nynz in the file is the number of rows, after the first one, that represent real data (it might happen that the last cells in the slice of interest do not have particles)
-	
+	//fprintf(fp,"%lf \t %d \t %d \t %d  \n", x_slice, nynz, cylinder.n_cells_dim[2], step);//nynz in the file is the number of rows, after the first one, that represent real data (it might happen that the last cells in the slice of interest do not have particles)
+
 	/* Allocate memory and initialize */
 	/* http://c-faq.com/aryptr/dynmuldimary.html */
 	slice_vel = malloc(nynz * sizeof(double *)); //allocate array of pointers to rows
@@ -245,6 +245,8 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 	//int first_cell = nynz*(int)floor(x_slice/cylinder.a);
 	int first_cell = slice_start_index(x_slice, nynz, cylinder.a);
 	
+	fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", cylinder.n_cells_dim[0], cylinder.n_cells_dim[1], cylinder.n_cells_dim[2], first_cell, first_cell + nynz - 1, step);//nynz in the file is the number of rows, after the first one, that represent real data (it might happen that the last cells in the slice of interest do not have particles)
+
 	/* Find out where each particle is, and gather the data */
 	/* This information could be stored in c_p, if supplied to this method. I do not consider it necessary, in any case a separate call would do*/
 	/* For example, in case another property that needs c_p is going to be calculated after the velocity profile */
@@ -412,7 +414,7 @@ inline void check_temperature(int ** cell_occupation, double ** vel ,double m, i
 	{
 		if( cell_occupation[ci][0] == 0)
 		{
-			cell_temp[ci] = -1.0;
+			cell_temp[ci] = 0.0;  //-1.0  right choice?
 			continue;
 		}
 		cell_vel[0] = 0.0;
@@ -451,6 +453,8 @@ inline void check_temperature(int ** cell_occupation, double ** vel ,double m, i
 }
 
 
+/* DEPRECATED 
+/* This function can be generalised to export any data ready for SAM profile *
 inline void export_temp_profile(double * cell_temp, Geometry geometry, int file_number, long int step)
 {
 	FILE * file_fp;
@@ -458,7 +462,7 @@ inline void export_temp_profile(double * cell_temp, Geometry geometry, int file_
 	snprintf(file_name,sizeof(char)*30,"./DATA/temperature_%d.dat",file_number);
 	file_fp=fopen(file_name,"w");
 	int i;		
-	fprintf(file_fp,"%d \t %d \t %d \t %ld \n",geometry.n_cells_dim[0],geometry.n_cells_dim[1],geometry.n_cells_dim[2], step);
+	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n",geometry.n_cells_dim[0],geometry.n_cells_dim[1],geometry.n_cells_dim[2], 0, geometry.n_cells-1, step);
 	for(i=0; i<geometry.n_cells; i++)
 	{
 		fprintf(file_fp,"%lf\t",cell_temp[i]);
@@ -468,8 +472,60 @@ inline void export_temp_profile(double * cell_temp, Geometry geometry, int file_
 		
 	return; /* back to main*/
 }
-	
+*/
 
+/* This function exports the data contained in the array data in a file format suitable for calculating a SAM average with average.c */
+/* The data in data should contain a list of the average value of the property under study in each cell considered, in consecutive order. */
+inline void export_SAM_data(double * data, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
+{
+	FILE * file_fp;
+	char file_name[50];
+	char filename1[50]="";
+	strcpy(filename1,filename);
+	strcat(filename1,"_%d.dat");
+	snprintf(file_name,sizeof(char)*30,filename1,file_number);
+	
+	
+	file_fp=fopen(file_name,"w");
+	int i;		
+	int num_cells = cell_end - cell_start +1;
+	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n",geometry.n_cells_dim[0],geometry.n_cells_dim[1],geometry.n_cells_dim[2], cell_start, cell_end, step);
+	for(i=0; i<num_cells; i++)
+	{
+		fprintf(file_fp,"%lf\t",data[i]);
+	}
+
+	fclose(file_fp);		
+		
+	return; /* back to main*/
+}
+
+//AQUI
+/* This function exports the data contained in the array data in a file format suitable for calculating a CAM average with average.c */
+/* The data in data should contain a list of the average value of the property under study in each cell considered, in consecutive order. */
+inline void export_CAM_data(double * data, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
+{
+	FILE * file_fp;
+	char file_name[50];
+	char filename1[50]="";
+	strcpy(filename1,filename);
+	strcat(filename1,"_%d.dat");
+	snprintf(file_name,sizeof(char)*30,filename1,file_number);
+	
+	
+	file_fp=fopen(file_name,"w");
+	int i;		
+	int num_cells = cell_end - cell_start +1;
+	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n",geometry.n_cells_dim[0],geometry.n_cells_dim[1],geometry.n_cells_dim[2], cell_start, cell_end, step);
+	for(i=0; i<num_cells; i++)
+	{
+		fprintf(file_fp,"%lf\t",data[i]);
+	}
+
+	fclose(file_fp);		
+		
+	return; /* back to main*/
+}
 
 /*-------------------------------*/
 /*		MAIN		 */
@@ -803,7 +859,10 @@ int main(int argc, char **argv) {
 					file_temp_counter++;
 					encage(pos, null_shift, n_part, cylinder, c_p, cell_mass, m, 1, cell_occupation);
 					check_temperature(cell_occupation, vel, m, n_cells, cell_mass);//recycling vector cell_mass as cell_temp. It is reset to 0 at the start of collide()
-					export_temp_profile(cell_mass, cylinder, file_temp_counter, i);
+					//export_temp_profile(cell_mass, cylinder, file_temp_counter, i);
+					/* the following line exports exactly the same as above - TESTED OK */
+					export_SAM_data(cell_mass, "./DATA/temperature", cylinder, 0, cylinder.n_cells-1, file_temp_counter, i);
+
 				#endif
 				
 			}

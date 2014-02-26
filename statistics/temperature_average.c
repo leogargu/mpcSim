@@ -21,10 +21,14 @@ inline void average_SAM(char * filename, int samples )
 	int ny=0;
 	int nz=0;
 	long int step=0;
+	int start=0, end=0;
 	
-	fscanf( fp, "%d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &step );
+	//fscanf( fp, "%d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &step );
+	fscanf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n",&nx,&ny,&nz,&start,&end,&step);
 	
-	int n_cells= nx*ny*nz;	
+
+	//int n_cells= nx*ny*nz;	
+	int n_cells = end-start +1;
 	
 	/* Allocate memory */
 	double * average;
@@ -43,9 +47,7 @@ inline void average_SAM(char * filename, int samples )
 	/* Read data from all files and start the average */
 	double aux;
 	char intaschar[20];
-	
-	//printf("ncells=%d\n",n_cells);
-	
+		
 	for(i=1; i<=samples; i++) //file 1 is open the first time that we pass through here	
 	{
 		for(j=0;j<n_cells;j++)
@@ -53,11 +55,11 @@ inline void average_SAM(char * filename, int samples )
 			//printf("hello!\n");
 			fscanf(fp, "%lf", &aux);
 			//printf("I read this %lf \n",aux);
-			if(aux >=0.0 )
-			{
+			//if(aux >=0.0 )
+			//{
 				average[j] += aux;
 				//printf("adding %lf to average\n",aux);
-			}
+			//}
 			
 		}
 		/* close this file...*/
@@ -76,7 +78,9 @@ inline void average_SAM(char * filename, int samples )
 		if( fp == NULL ){ perror("Error while opening the file.\n"); exit(EXIT_FAILURE);}
 
 		/* read fist line to set the pointer in the right position. Checking of parameters for robustness is possible here */
-		fscanf( fp, "%d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &step );
+		//fscanf( fp, "%d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &step );
+		fscanf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n",&nx,&ny,&nz,&start,&end,&step);
+
 		
 	}
 	
@@ -85,8 +89,9 @@ inline void average_SAM(char * filename, int samples )
 		
 	fopen("./DATA/temperature_SAM_averaged.dat","w");
 	
-	fprintf( fp, "%d \t %d \t %d \n", nx, ny, nz );
-	
+	//fprintf( fp, "%d \t %d \t %d \n", nx, ny, nz );
+	fprintf(fp,"%d \t %d \t %d \t %d \t %d \n",nx,ny,nz,start,end);
+			
 	double factor=1.0/(double)samples;
 	for(i=0; i<n_cells; i++)
 	{

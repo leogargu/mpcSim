@@ -7,13 +7,13 @@ Further production DATA will be added in the future. Create a different repo wit
 
 Current priorities:
 1.- Calculate fluctuations in momentum and kinetic energy, and export the data for plotting
-2.- Calculate temperature, check it is constant
+    2.- Calculate temperature, check it is constant
 3.- Calculate pressure
 4.- Clean the code
 5.- Automate equilibration?
 6.- Implement radial averaging in the velocity profile
 7.- Compare profile with NS results 
-8.- Build a debug system for teh stream-collide laternating algorith, Initiated in Matehmatica
+
 
 Complete To-do list
 
@@ -30,3 +30,4 @@ Complete To-do list
 Recently done:
 1.- Use Git and stablish a workflow
 2.- Use gprof to profile the code. Note: to show performance of all functions, prevent indentation with -fno-indent in the Makefile, Also, use -pg both compiling and linking
+3.- stream-collide debugged using a previous version stored in Git.
