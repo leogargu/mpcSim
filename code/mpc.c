@@ -198,14 +198,14 @@ inline int slice_start_index(double x, int nynz, double a)
 }
 
 
-
-/* It exports the data to do the averages to calculate the 3Dvelocity profile at a given */
+/* DEPRECATED
+/* It exports the data to do the averages to calculate the 3Dvelocity profile at a given *
 /* point x, at a particular time step */
-/* The first row in the exported file contains, in this order: the x value at which the slice is taken, */
-/* the number of cells in the slice (ny*nz), and the number of cells in each column in that slice (nz)  */
+/* The first row in the exported file contains, in this order: the x value at which the slice is taken, *
+/* the number of cells in the slice (ny*nz), and the number of cells in each column in that slice (nz)  *
 inline void export_vel_profile(int n_part, double density, double ** vel, double ** pos, const Geometry cylinder, double x_slice, int file_number ,int step)
 {
-	/* Declare variables */
+	/* Declare variables *
 	FILE * fp;
 	char file_name[30];
 	int i,j;
@@ -215,14 +215,14 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 	int nynz = cylinder.n_cells_dim[1] * cylinder.n_cells_dim[2];
 	double nullshift[3]={0.0,0.0,0.0};
 	
-	/* Set up file */
+	/* Set up file *
 	snprintf(file_name,sizeof(char)*30,"./DATA/velprofile_%d.dat",file_number);
 
 	fp=fopen(file_name,"w");
 	//fprintf(fp,"%lf \t %d \t %d \t %d  \n", x_slice, nynz, cylinder.n_cells_dim[2], step);//nynz in the file is the number of rows, after the first one, that represent real data (it might happen that the last cells in the slice of interest do not have particles)
 
-	/* Allocate memory and initialize */
-	/* http://c-faq.com/aryptr/dynmuldimary.html */
+	/* Allocate memory and initialize *
+	/* http://c-faq.com/aryptr/dynmuldimary.html *
 	slice_vel = malloc(nynz * sizeof(double *)); //allocate array of pointers to rows
 	if (slice_vel==NULL) {printf("Error allocating slice_vel in mpc.c\n"); exit(EXIT_FAILURE);}	
 	slice_vel[0] = malloc(nynz * max_part_density * sizeof(double)); // allocate the whole memory of the 2D array to store the data, and initialize to 0
@@ -241,19 +241,19 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 		}
 	}
 	
-	/* Find slice of interest  */
+	/* Find slice of interest  *
 	//int first_cell = nynz*(int)floor(x_slice/cylinder.a);
 	int first_cell = slice_start_index(x_slice, nynz, cylinder.a);
 	
 	fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", cylinder.n_cells_dim[0], cylinder.n_cells_dim[1], cylinder.n_cells_dim[2], first_cell, first_cell + nynz - 1, step);//nynz in the file is the number of rows, after the first one, that represent real data (it might happen that the last cells in the slice of interest do not have particles)
 
-	/* Find out where each particle is, and gather the data */
+	/* Find out where each particle is, and gather the data *
 	/* This information could be stored in c_p, if supplied to this method. I do not consider it necessary, in any case a separate call would do*/
-	/* For example, in case another property that needs c_p is going to be calculated after the velocity profile */
+	/* For example, in case another property that needs c_p is going to be calculated after the velocity profile *
 	int cell_idx = 0;
 	for(i=0; i<n_part; i++) //loop over particles
 	{
-		/* Which cell is this particle in?*/
+		/* Which cell is this particle in?*
 		cell_idx = pos2cell_idx(cylinder, pos[i], nullshift);
 		if( cell_idx >= first_cell && cell_idx < first_cell+nynz)//if particle i is in a cell in the slice of interest...
 		{
@@ -268,9 +268,12 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 		}
 	}
 	
+
+
+	
 	int local_density = 0;
 	
-	/* Export to file */
+	/* Export to file *
 	for(i=0; i<nynz; i++) // i is the cell in the slice of interest
 	{
 		local_density = (int)slice_vel[i][0];
@@ -287,12 +290,14 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 	  	}
 	}
 	
-	/* Clean up and release memory*/
+	/* Clean up and release memory*
 	fclose(fp);
 	free(slice_vel[0]);
 	free(slice_vel);
 
 }
+*/
+
 
 
 /* Calculates the total linear momentum of the system per particle. Returns a 3D vector */
@@ -470,9 +475,8 @@ inline void export_temp_profile(double * cell_temp, Geometry geometry, int file_
 
 	fclose(file_fp);		
 		
-	return; /* back to main*/
-}
-*/
+	return; /* back to main*
+}*/
 
 /* This function exports the data contained in the array data in a file format suitable for calculating a SAM average with average.c */
 /* The data in data should contain a list of the average value of the property under study in each cell considered, in consecutive order. */
@@ -500,32 +504,140 @@ inline void export_SAM_data(double * data, char * filename, Geometry geometry, i
 	return; /* back to main*/
 }
 
-//AQUI
 /* This function exports the data contained in the array data in a file format suitable for calculating a CAM average with average.c */
-/* The data in data should contain a list of the average value of the property under study in each cell considered, in consecutive order. */
-inline void export_CAM_data(double * data, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
+/* The data in data should contain a 2D array with each row containing teh values of interest for the particles in the corresponding collision cell. Cells are stored
+   in consecutive order. The occupation numbers, ie length of the rows, ie the local instantaneous densities are stored in the array of ints local_density.*/
+/* not tested yet*/
+inline void export_CAM_data(double ** data, int * local_density, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
 {
-	FILE * file_fp;
+	FILE * fp;
 	char file_name[50];
 	char filename1[50]="";
 	strcpy(filename1,filename);
 	strcat(filename1,"_%d.dat");
 	snprintf(file_name,sizeof(char)*30,filename1,file_number);
 	
+	int num_cells = cell_end - cell_start + 1;
+	int i,j;
 	
-	file_fp=fopen(file_name,"w");
-	int i;		
-	int num_cells = cell_end - cell_start +1;
-	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n",geometry.n_cells_dim[0],geometry.n_cells_dim[1],geometry.n_cells_dim[2], cell_start, cell_end, step);
-	for(i=0; i<num_cells; i++)
-	{
-		fprintf(file_fp,"%lf\t",data[i]);
+	fp=fopen(file_name,"w");
+	fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", geometry.n_cells_dim[0], geometry.n_cells_dim[1], geometry.n_cells_dim[2], cell_start, cell_end, step);
+	
+	/* Export to file */
+	for(i=0; i<num_cells; i++) // i is the cell in the slice of interest
+	{	
+		fprintf(fp, "%d\t", local_density[i]);
+		if( local_density[i]>0 )
+		{
+			for(j=1; j<=local_density[i]; j++ ) // j is the particle in cell i
+			{
+				fprintf(fp,"%lf\t",data[i][j]);
+			}
+			fprintf(fp,"\n");
+		}else{
+			fprintf(fp,"\n");
+	  	}
 	}
-
-	fclose(file_fp);		
+	
+	/* Clean up and release memory*/
+	fclose(fp);	
 		
 	return; /* back to main*/
 }
+
+
+
+
+
+
+
+/* It exports the data to do the averages to calculate the 3Dvelocity profile at a given */
+/* point x, at a particular time step */
+/* The first row in the exported file contains, in this order: the x value at which the slice is taken, */
+/* the number of cells in the slice (ny*nz), and the number of cells in each column in that slice (nz)  */
+/* IDEA TO INCREASE PERFORMANCE: DO NOT ALLOCATE AND DEALOCATE MEMORY IN EVERY CALL, EITHER USE STATIC OR pass the arrays as arguments, allocate once in main*/
+inline void export_vel_profile(int n_part, double density, double ** vel, double ** pos, const Geometry cylinder, double x_slice, int file_number ,int step)
+{
+	/* Declare variables */
+	//FILE * fp;
+	char file_name[30]="./DATA/velprofile";
+	int i,j;
+	double ** slice_vel;
+	int * local_density;
+	int max_part_density = (int)density * DENSITY_TOL; // This is the maximum particle density in any given cell that is tolerated (WARNING: only controlled if the function check_incompressibility is called in the main simulation loop!)
+	int idx;
+	int nynz = cylinder.n_cells_dim[1] * cylinder.n_cells_dim[2];
+	double nullshift[3]={0.0,0.0,0.0};
+	
+	/* Allocate memory and initialize */
+	/* http://c-faq.com/aryptr/dynmuldimary.html */
+	slice_vel = malloc(nynz * sizeof(double *)); //allocate array of pointers to rows
+	if (slice_vel==NULL) {printf("Error allocating slice_vel in mpc.c\n"); exit(EXIT_FAILURE);}	
+	slice_vel[0] = malloc(nynz * max_part_density * sizeof(double)); // allocate the whole memory of the 2D array to store the data, and initialize to 0
+	if (slice_vel[0]==NULL) {printf("Error allocating slice_vel[0] in mpc.c\n"); exit(EXIT_FAILURE);}
+	
+	local_density = malloc(nynz * sizeof(int)); 
+	if (local_density==NULL) {printf("Error allocating local_density in mpc.c\n"); exit(EXIT_FAILURE);}
+	
+	for(i = 0; i<nynz; i++)
+	{
+		slice_vel[i] = slice_vel[0] + i * max_part_density; // assign the pointers to the correct start of their rows
+	}
+	
+	for(i=0; i<nynz; i++) 
+	{
+		local_density[i] = 0;
+		
+		for(j=0; j< max_part_density; j++) //Optimising: the rightmost index in the inner loop.
+		{
+			slice_vel[i][j] = 0.0;
+		}
+	}
+	
+	/* Find slice of interest  */
+	int first_cell = slice_start_index(x_slice, nynz, cylinder.a);
+	
+
+	/* Find out where each particle is, and gather the data */
+	/* This information could be stored in c_p, if supplied to this method. I do not consider it necessary, in any case a separate call would do*/
+	/* For example, in case another property that needs c_p is going to be calculated after the velocity profile */
+	int cell_idx = 0;
+	for(i=0; i<n_part; i++) //loop over particles
+	{
+		/* Which cell is this particle in?*/
+		cell_idx = pos2cell_idx(cylinder, pos[i], nullshift);
+		if( cell_idx >= first_cell && cell_idx < first_cell+nynz)//if particle i is in a cell in the slice of interest...
+		{
+			idx = cell_idx - first_cell; //relative cell index
+			local_density[idx]+=1; // update the counter
+			if(local_density[idx]>max_part_density) //this prevents array overflow/out of bounds
+			{
+			  	  printf("export_vel_profile in mpc.c: Local density exceeded max tolerance (%d). Aborting...\n",max_part_density);
+			  	  exit(EXIT_FAILURE);
+			}
+			slice_vel[ idx ][ local_density[idx] ] = vel[i][0];  //export x-velocity only
+		}
+	}
+	
+
+	/* now, export the data */
+	export_CAM_data(slice_vel, local_density, file_name, cylinder, first_cell, first_cell + nynz - 1, file_number, step);
+	
+	
+	/* Clean up and release memory*/
+	free(slice_vel[0]);
+	free(slice_vel);
+	free(local_density);
+
+}
+
+
+
+
+
+
+	
+
 
 /*-------------------------------*/
 /*		MAIN		 */
@@ -559,9 +671,9 @@ int main(int argc, char **argv) {
 	
 	const double g = 0.5;		/// "Gravity" (acceleration that drags the flow in the x-direction)
 	double t = 0.0;			/// Time
-	long int i,j; 		 	/* Generic loop counters */
-	const long int steps = 1000;	/// Number of steps in the simulation
-	long int equilibration_time = 300; 
+	int i,j; 		 	/* Generic loop counters */
+	const int steps = 1000;	/// Number of steps in the simulation
+	int equilibration_time = 300; 
 	
 	double verlet_epsilon = (1e-5)*radius; // i.e., tolerance zone thickness 2*epsilon = 2% of the radius.
 	double verlet_min_sq = radius - verlet_epsilon;
@@ -767,7 +879,7 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 	
-	long int counter = 0;
+	int counter = 0;
 	
 	/* Variables to monitor equilibration*/
 	double momentumPpart[3] = {0.0,0.0,0.0}; //linear momentum per particle, at any given timestep
@@ -839,7 +951,8 @@ int main(int argc, char **argv) {
 			{
 				//fprintf(stderr,"Exporting velocity profile data at step number %d\n", i);
 				file_counter++;
-				export_vel_profile(n_part, density, vel, pos, cylinder, x_slice, file_counter, i); 
+				//DEPRECATED: export_vel_profile(n_part, density, vel, pos, cylinder, x_slice, file_counter, i); 
+				export_vel_profile(n_part, density, vel, pos, cylinder, x_slice, file_counter, i);
 				counter = equilibration_time;
 			}
 		#endif
