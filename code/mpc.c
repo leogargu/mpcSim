@@ -360,7 +360,6 @@ inline void check_compressibility(double * cell_mass, int n_cells, double m_inv,
 
 		
 
-
 inline void encage(double ** pos, double * shift, int n_part, Geometry cylinder, int * c_p, double * cell_mass, double m, int calculate_cell_occupation , int ** cell_occupation)
 {
 	int i;
@@ -398,7 +397,7 @@ inline void encage(double ** pos, double * shift, int n_part, Geometry cylinder,
 
 
 
-/* cell_temp is output arrau*/
+/* cell_temp is output array*/
 inline void check_temperature(int ** cell_occupation, double ** vel ,double m, int n_cells, double * cell_temp)
 {
 	int ci,j,k;
@@ -438,6 +437,8 @@ inline void check_temperature(int ** cell_occupation, double ** vel ,double m, i
 			for(k=0; k<3; k++)
 			{
 				cell_temp[ci] += ((vel[ cell_occupation[ci][j] ][k]-cell_vel[k]) * (vel[ cell_occupation[ci][j] ][k]-cell_vel[k]));
+				//cell_temp[ci] += ((vel[ cell_occupation[ci][j] ][k] ) * (vel[ cell_occupation[ci][j] ][k]));
+
 			}
 		}
 		cell_temp[ci]*= (m/((double)3*cell_occupation[ci][0]));
@@ -450,6 +451,24 @@ inline void check_temperature(int ** cell_occupation, double ** vel ,double m, i
 }
 
 
+inline void export_temp_profile(double * cell_temp, Geometry geometry, int file_number, long int step)
+{
+	FILE * file_fp;
+	char file_name[30];
+	snprintf(file_name,sizeof(char)*30,"./DATA/temperature_%d.dat",file_number);
+	file_fp=fopen(file_name,"w");
+	int i;		
+	fprintf(file_fp,"%d \t %d \t %d \t %ld \n",geometry.n_cells_dim[0],geometry.n_cells_dim[1],geometry.n_cells_dim[2], step);
+	for(i=0; i<geometry.n_cells; i++)
+	{
+		fprintf(file_fp,"%lf\t",cell_temp[i]);
+	}
+
+	fclose(file_fp);		
+		
+	return; /* back to main*/
+}
+	
 
 
 /*-------------------------------*/
@@ -476,7 +495,7 @@ int main(int argc, char **argv) {
 	const int n_cells = (int)((Lx*L*L)/(a*a*a));  	/// Number of cells in the simulation box	
 	const double dt = 1.0;		/// Timestep
 	const double density = (1.0*n_part)/(L*L*Lx);  	/// Number of particles per collision cell //const int
-	const double null_shift[3] = {0.0, 0.0, 0.0};
+	double null_shift[3] = {0.0, 0.0, 0.0};
 	
 	/* TODO: check Whitmer's implementation of Verlet step and why he does not have a lambda */
 	//const double lambda = 0.65;  /// Verlet's algorithm lambda parameter. 0.65 is a "magic number" for DPD, see page 5 of \cite{verlet}," Novel Methods in Soft Matter Simulations", ed. Karttunen et. al.
@@ -484,8 +503,8 @@ int main(int argc, char **argv) {
 	
 	const double g = 0.5;		/// "Gravity" (acceleration that drags the flow in the x-direction)
 	double t = 0.0;			/// Time
-	int i,j; 		 	/* Generic loop counters */
-	const long int steps = 5000;	/// Number of steps in the simulation
+	long int i,j; 		 	/* Generic loop counters */
+	const long int steps = 1000;	/// Number of steps in the simulation
 	long int equilibration_time = 300; 
 	
 	double verlet_epsilon = (1e-5)*radius; // i.e., tolerance zone thickness 2*epsilon = 2% of the radius.
@@ -708,6 +727,9 @@ int main(int argc, char **argv) {
 		//FILE * debug_fp;
 		debug_fp=fopen("debug_data.dat","w");
 	#endif
+	#if CHECK_TEMPERATURE
+		int file_temp_counter = 0;
+	#endif
 	/* Loop for a fixed number of times */
 	for(i=1; i<= steps; i++)
 	{
@@ -765,6 +787,8 @@ int main(int argc, char **argv) {
 				counter = equilibration_time;
 			}
 		#endif
+		
+		
 
 		#if CHECK_EQUILIBRATION
 			equilibration_counter++;
@@ -774,14 +798,23 @@ int main(int argc, char **argv) {
 				energyPpart = total_kinetic_energy_ppart(n_part, m, vel); 
 				printf("%d \t %.4lf \t %.4lf \t %.4lf \t %.4lf\n", i, momentumPpart[0],momentumPpart[1],momentumPpart[2], energyPpart);
 				equilibration_counter = 0;
+				
 				#if CHECK_TEMPERATURE
+					file_temp_counter++;
 					encage(pos, null_shift, n_part, cylinder, c_p, cell_mass, m, 1, cell_occupation);
+					check_temperature(cell_occupation, vel, m, n_cells, cell_mass);//recycling vector cell_mass as cell_temp. It is reset to 0 at the start of collide()
+					export_temp_profile(cell_mass, cylinder, file_temp_counter, i);
 				#endif
+				
 			}
 		#endif
 
 	}/* end for loop (stream-collide steps) */
 
+	
+	
+	
+	
 	
 	/*------------------------------------------------------------------*/
 	/*	EXITING							    */

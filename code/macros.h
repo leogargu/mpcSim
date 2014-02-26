@@ -31,16 +31,16 @@ and accelerations of all particles. It also exports auxiliary vtk files: collisi
 #define EXPORT_STATES 0
 
 /* Exports files to do CAM average over a x_slice, ready to plot the parabolic profile of POiseuille flow */
-#define EXPORT_VEL_PROFILE 1
+#define EXPORT_VEL_PROFILE 0
 
 /* Checks, at every timestep, that the instantaneous density at any collision cell is less than DENSITY_TOLxInitial density */
 #define CHECK_COMPRESSIBILITY 1
 #define DENSITY_TOL 10
 
 /* Exports a file, at regular timesteps, containing the temperature in each collision cell. */
-#define CHECK_TEMPERATURE 0
+#define CHECK_TEMPERATURE 1
 
-#define CHECK_EQUILIBRATION 0
+#define CHECK_EQUILIBRATION 1
 
 
 
