@@ -40,7 +40,9 @@ and accelerations of all particles. It also exports auxiliary vtk files: collisi
 /* Exports a file, at regular timesteps, containing the temperature in each collision cell. */
 #define CHECK_TEMPERATURE 0
 
-#define CHECK_EQUILIBRATION 0
+/* Set to 1 when running equilibration tests. It exports the momentum (3 components) and kinetic energy per particle (average over all particles at that timestep),
+at every timestep. Redo calculations using the script.pbs.oXXX file data, which includes all geometrical data and the RNG seed. */
+#define CHECK_EQUILIBRATION 1
 
 
 

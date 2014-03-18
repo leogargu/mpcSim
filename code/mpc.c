@@ -198,107 +198,6 @@ inline int slice_start_index(double x, int nynz, double a)
 }
 
 
-/* DEPRECATED
-/* It exports the data to do the averages to calculate the 3Dvelocity profile at a given *
-/* point x, at a particular time step */
-/* The first row in the exported file contains, in this order: the x value at which the slice is taken, *
-/* the number of cells in the slice (ny*nz), and the number of cells in each column in that slice (nz)  *
-inline void export_vel_profile(int n_part, double density, double ** vel, double ** pos, const Geometry cylinder, double x_slice, int file_number ,int step)
-{
-	/* Declare variables *
-	FILE * fp;
-	char file_name[30];
-	int i,j;
-	double ** slice_vel;
-	int max_part_density = (int)density * DENSITY_TOL +1; // This is the maximum particle density in any given cell that is tolerated (WARNING: only controlled if the function check_incompressibility is called in the main simulation loop!)
-	int idx;
-	int nynz = cylinder.n_cells_dim[1] * cylinder.n_cells_dim[2];
-	double nullshift[3]={0.0,0.0,0.0};
-	
-	/* Set up file *
-	snprintf(file_name,sizeof(char)*30,"./DATA/velprofile_%d.dat",file_number);
-
-	fp=fopen(file_name,"w");
-	//fprintf(fp,"%lf \t %d \t %d \t %d  \n", x_slice, nynz, cylinder.n_cells_dim[2], step);//nynz in the file is the number of rows, after the first one, that represent real data (it might happen that the last cells in the slice of interest do not have particles)
-
-	/* Allocate memory and initialize *
-	/* http://c-faq.com/aryptr/dynmuldimary.html *
-	slice_vel = malloc(nynz * sizeof(double *)); //allocate array of pointers to rows
-	if (slice_vel==NULL) {printf("Error allocating slice_vel in mpc.c\n"); exit(EXIT_FAILURE);}	
-	slice_vel[0] = malloc(nynz * max_part_density * sizeof(double)); // allocate the whole memory of the 2D array to store the data, and initialize to 0
-	if (slice_vel[0]==NULL) {printf("Error allocating slice_vel[0] in mpc.c\n"); exit(EXIT_FAILURE);}
-	
-	for(i = 1; i<nynz; i++)
-	{
-		slice_vel[i] = slice_vel[0] + i * max_part_density; // assign the pointers to the correct start of their rows
-	}
-	
-	for(i=0; i<nynz; i++) 
-	{
-		for(j=0; j< max_part_density; j++) //Optimising: the rightmost index in the inner loop.
-		{
-			slice_vel[i][j] = 0.0;
-		}
-	}
-	
-	/* Find slice of interest  *
-	//int first_cell = nynz*(int)floor(x_slice/cylinder.a);
-	int first_cell = slice_start_index(x_slice, nynz, cylinder.a);
-	
-	fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", cylinder.n_cells_dim[0], cylinder.n_cells_dim[1], cylinder.n_cells_dim[2], first_cell, first_cell + nynz - 1, step);//nynz in the file is the number of rows, after the first one, that represent real data (it might happen that the last cells in the slice of interest do not have particles)
-
-	/* Find out where each particle is, and gather the data *
-	/* This information could be stored in c_p, if supplied to this method. I do not consider it necessary, in any case a separate call would do*/
-	/* For example, in case another property that needs c_p is going to be calculated after the velocity profile *
-	int cell_idx = 0;
-	for(i=0; i<n_part; i++) //loop over particles
-	{
-		/* Which cell is this particle in?*
-		cell_idx = pos2cell_idx(cylinder, pos[i], nullshift);
-		if( cell_idx >= first_cell && cell_idx < first_cell+nynz)//if particle i is in a cell in the slice of interest...
-		{
-			idx = cell_idx - first_cell;
-			slice_vel[idx][0]+=1; // update the counter
-			if(slice_vel[idx][0]>max_part_density) //this prevents array overflow/out of bounds
-			{
-			  	  printf("export_vel_profile in mpc.c: Local density exceeded max tolerance (%d). Aborting...\n",max_part_density);
-			  	  exit(EXIT_FAILURE);
-			}
-			slice_vel[ idx ][ (int)slice_vel[idx][0] ] = vel[i][0];  //export x-velocity only
-		}
-	}
-	
-
-
-	
-	int local_density = 0;
-	
-	/* Export to file *
-	for(i=0; i<nynz; i++) // i is the cell in the slice of interest
-	{
-		local_density = (int)slice_vel[i][0];
-		fprintf(fp, "%d\t", local_density);
-		if( local_density>0 )
-		{
-			for(j=1; j<=local_density; j++ ) // j is the particle in cell i
-			{
-				fprintf(fp,"%lf\t",slice_vel[i][j]);
-			}
-			fprintf(fp,"\n");
-		}else{
-			fprintf(fp,"\n");
-	  	}
-	}
-	
-	/* Clean up and release memory*
-	fclose(fp);
-	free(slice_vel[0]);
-	free(slice_vel);
-
-}
-*/
-
-
 
 /* Calculates the total linear momentum of the system per particle. Returns a 3D vector */
 inline void total_momentum_ppart(int n_part, double m, double ** vel, double * momentum)
@@ -331,18 +230,37 @@ inline void total_momentum_ppart(int n_part, double m, double ** vel, double * m
 	return; /* Back to main */
 }
 
+
+/* returnd the square norm of a 3D vector v */
+inline double norm_sq(double * v)
+{
+	return v[0]*v[0]+v[1]*v[1]+v[2]*v[2];
+}
+
 /* Calculates the total energy per particle, over the whole system, at the time of the call*/
-inline double total_kinetic_energy_ppart(int n_part, double m, double ** vel)
+inline void total_kinetic_energy(int n_part, double m, double ** vel, double * output)
 {
 	double energy = 0.0;
 	int i;
+	double sigma = 0.0;
 	
 	for(i=0; i<n_part; i++)
 	{
-		energy += m * ( vel[i][0]*vel[i][0] + vel[i][1]*vel[i][1] + vel[i][2]*vel[i][2] );
+		//energy += m * ( vel[i][0]*vel[i][0] + vel[i][1]*vel[i][1] + vel[i][2]*vel[i][2] );
+		energy += m * norm_sq(vel[i]);
 	}
+	energy = 0.5*energy;
 	
-	return 0.5*energy/(double)n_part;
+	for(i=0; i<n_part; i++)
+	{
+		sigma += (0.5*m*norm_sq(vel[i])-energy)*(0.5*m*norm_sq(vel[i])-energy);
+	}
+	sigma = sigma /(double)n_part;
+	
+	output[0] = energy;
+	output[1] = sigma;
+	
+	return;
 }
 
 
@@ -366,8 +284,11 @@ inline void check_compressibility(double * cell_mass, int n_cells, double m_inv,
 }
 
 		
-
-inline void encage(double ** pos, double * shift, int n_part, Geometry cylinder, int * c_p, double * cell_mass, double m, int calculate_cell_occupation , int ** cell_occupation)
+/* Maps the particle positions to the cells they ar at, after the grid has been shifted by a vector shift.
+   It fills in the vector c_p, cell_mass and cell_occupation (CAM-like) 		*/
+/* MODYDIFY THIS */
+//inline void encage(double ** pos, double * shift, int n_part, Geometry cylinder, int * c_p, double * cell_mass, double m, int calculate_cell_occupation , int ** cell_occupation)
+inline void encage(double ** pos, double * shift, int n_part, Geometry cylinder, int * c_p, int calculate_cell_occupation , int ** cell_occupation)
 {
 	int i;
 	int cell_idx;
@@ -381,19 +302,19 @@ inline void encage(double ** pos, double * shift, int n_part, Geometry cylinder,
 		}
 	}
 	
-	for(i=0; i<cylinder.n_cells; i++)
+	/*for(i=0; i<cylinder.n_cells; i++)
 	{
 		cell_mass[i] = 0.0;
-	}
+	}*/
 	
 	for(i=0; i<n_part; i++)
 	{
 		cell_idx = pos2cell_idx(cylinder, pos[i], shift );// canonize is included here, and check of being outside of the cylinder too
 		c_p[i] = cell_idx;
-		cell_mass[cell_idx]+=m;
+		//cell_mass[cell_idx]+=m; //this line...
 		if(calculate_cell_occupation)
 		{
-			cell_occupation[cell_idx][0]++;
+			cell_occupation[cell_idx][0]++;//...and this line are equivalent
 			cell_occupation[cell_idx][cell_occupation[cell_idx][0]] = i;
 		}
 	}
@@ -404,7 +325,11 @@ inline void encage(double ** pos, double * shift, int n_part, Geometry cylinder,
 
 
 
-/* cell_temp is output array*/
+/* cell_temp is output array of the local (collision cell) temperature */
+/* To do SAM average, call with factor 1.0 */
+/* This function calculates teh temperature in each cell over the whole simulation box */
+/* Use for SAM averaging */
+/* cell_temp is the output array. cell_occupation is input. Call encage first to generate it. */
 inline void check_temperature(int ** cell_occupation, double ** vel ,double m, int n_cells, double * cell_temp)
 {
 	int ci,j,k;
@@ -458,25 +383,6 @@ inline void check_temperature(int ** cell_occupation, double ** vel ,double m, i
 }
 
 
-/* DEPRECATED 
-/* This function can be generalised to export any data ready for SAM profile *
-inline void export_temp_profile(double * cell_temp, Geometry geometry, int file_number, long int step)
-{
-	FILE * file_fp;
-	char file_name[30];
-	snprintf(file_name,sizeof(char)*30,"./DATA/temperature_%d.dat",file_number);
-	file_fp=fopen(file_name,"w");
-	int i;		
-	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n",geometry.n_cells_dim[0],geometry.n_cells_dim[1],geometry.n_cells_dim[2], 0, geometry.n_cells-1, step);
-	for(i=0; i<geometry.n_cells; i++)
-	{
-		fprintf(file_fp,"%lf\t",cell_temp[i]);
-	}
-
-	fclose(file_fp);		
-		
-	return; /* back to main*
-}*/
 
 /* This function exports the data contained in the array data in a file format suitable for calculating a SAM average with average.c */
 /* The data in data should contain a list of the average value of the property under study in each cell considered, in consecutive order. */
@@ -508,6 +414,7 @@ inline void export_SAM_data(double * data, char * filename, Geometry geometry, i
 /* The data in data should contain a 2D array with each row containing teh values of interest for the particles in the corresponding collision cell. Cells are stored
    in consecutive order. The occupation numbers, ie length of the rows, ie the local instantaneous densities are stored in the array of ints local_density.*/
 /* not tested yet*/
+/* Any 2D array ontaining CAM data can be exported to a file calling this function */
 inline void export_CAM_data(double ** data, int * local_density, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
 {
 	FILE * fp;
@@ -549,17 +456,15 @@ inline void export_CAM_data(double ** data, int * local_density, char * filename
 
 
 
-
-
 /* It exports the data to do the averages to calculate the 3Dvelocity profile at a given */
 /* point x, at a particular time step */
 /* The first row in the exported file contains, in this order: the x value at which the slice is taken, */
 /* the number of cells in the slice (ny*nz), and the number of cells in each column in that slice (nz)  */
 /* IDEA TO INCREASE PERFORMANCE: DO NOT ALLOCATE AND DEALOCATE MEMORY IN EVERY CALL, EITHER USE STATIC OR pass the arrays as arguments, allocate once in main*/
+/* PING - check this after changing export_CAM_data */
 inline void export_vel_profile(int n_part, double density, double ** vel, double ** pos, const Geometry cylinder, double x_slice, int file_number ,int step)
 {
 	/* Declare variables */
-	//FILE * fp;
 	char file_name[30]="./DATA/velprofile";
 	int i,j;
 	double ** slice_vel;
@@ -636,7 +541,7 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 
 
 
-	
+
 
 
 /*-------------------------------*/
@@ -644,6 +549,37 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 /*-------------------------------*/
 
 int main(int argc, char **argv) {
+	
+	int i=0,j=0; 		 	/* Generic loop counters */
+	
+	FILE * input_fp;
+	input_fp = fopen(argv[1],"r");
+	//input_fp = fopen("input.dat","r");
+	if(input_fp == NULL){ fprintf(stderr,"Cannot open input file.\n Aborting...\n"); exit(EXIT_FAILURE);}
+	
+	
+	char variable_name[15];
+	double value=0.0;
+	double variable_array[10];
+	while (fscanf(input_fp, "%s\t%lf", variable_name, &value) == 2) {
+		
+		printf("reading variable %s = %.3lf\n",variable_name, value);
+		variable_array[i] = value;
+		i++;
+  	}
+
+  	const double a = variable_array[0];		/// Size of a collision cell (cubic cell)
+	const double Lx = variable_array[1];		/// Length of the simulation box in the direction of the flow //10
+	const double L = variable_array[2];		/// Width and height of the simulation box //4
+	const int n_part = variable_array[3];   	/// Number of particles in the simulation box//density=10
+	const double T = variable_array[4];  		/// Temperature, in kT units
+	const double m = variable_array[5]; 		/// Mass of a particle (plasma)
+	const double dt = variable_array[6];
+	const double g = variable_array[7];		/// "Gravity" (acceleration that drags the flow in the x-direction)
+	const int steps = variable_array[8];	/// Number of steps in the simulation
+	int equilibration_time = variable_array[9]; 
+	
+	fclose(input_fp);
 	/*------------------------------------------------------------------*/
 	/*	SETUP							    */
 	/* 	Definition of constants, initialization of variables,       */
@@ -652,16 +588,16 @@ int main(int argc, char **argv) {
 	/*	 See description of units in Watari2007 		    */
 	/*------------------------------------------------------------------*/
 	/* Parameters, constants and variables */
-	const double a = 1.0;		/// Size of a collision cell (cubic cell)
+	/*const double a = 1.0;		/// Size of a collision cell (cubic cell)
 	const double Lx = 30.0;		/// Length of the simulation box in the direction of the flow //10
 	const double L = 10.0;		/// Width and height of the simulation box //4
 	const int n_part = 30000;   	/// Number of particles in the simulation box//density=10
 	const double T = 1.0;  		/// Temperature, in kT units
-	const double m = 1.0; 		/// Mass of a particle (plasma)
+	const double m = 1.0;*/ 		/// Mass of a particle (plasma)
 	const double m_inv = 1.0/m;	/// Inverse mass of a particle (plasma)
 	const double radius = 0.5*( L - a );	   	/// Radius of the cylindrical vessel. It is a/2 smaller than half the box side to allow for grid shifting 
 	const int n_cells = (int)((Lx*L*L)/(a*a*a));  	/// Number of cells in the simulation box	
-	const double dt = 1.0;		/// Timestep
+	//const double dt = 0.01;		/// Timestep
 	const double density = (1.0*n_part)/(L*L*Lx);  	/// Number of particles per collision cell //const int
 	double null_shift[3] = {0.0, 0.0, 0.0};
 	
@@ -669,11 +605,14 @@ int main(int argc, char **argv) {
 	//const double lambda = 0.65;  /// Verlet's algorithm lambda parameter. 0.65 is a "magic number" for DPD, see page 5 of \cite{verlet}," Novel Methods in Soft Matter Simulations", ed. Karttunen et. al.
 	/* consider setting lambda inside stream()? maybe as a define? */
 	
-	const double g = 0.5;		/// "Gravity" (acceleration that drags the flow in the x-direction)
+	//const double g = 1e-4;	/// "Gravity" (acceleration that drags the flow in the x-direction)
 	double t = 0.0;			/// Time
-	int i,j; 		 	/* Generic loop counters */
-	const int steps = 1000;	/// Number of steps in the simulation
-	int equilibration_time = 300; 
+	/*const int steps = 10000;	/// Number of steps in the simulation
+	int equilibration_time = 300; */
+	
+	#if CHECK_EQUILIBRATION
+		equilibration_time = 0;
+	#endif
 	
 	double verlet_epsilon = (1e-5)*radius; // i.e., tolerance zone thickness 2*epsilon = 2% of the radius.
 	double verlet_min_sq = radius - verlet_epsilon;
@@ -720,6 +659,11 @@ int main(int argc, char **argv) {
 	printf("grid \t\t %.0lfx%.0lfx%.0lf \n",L/a,L/a,Lx/a);
 	printf("simulation box \t %.2lfx%.2lfx%.2lf\n",Lx,L,L);
 	printf("Mean free path \t %.2lf\n",dt * sqrt(T*m_inv));
+	printf("Kinetic viscosity /eta/ \t %.2lf\n", density * T * dt * ((density/(density-1+exp(-density)))-0.5)/(a*a*a) );
+	printf("Collision viscosity /eta/\t %.2lf\n", m * (density-1+exp(-density))/(12*a*dt));
+	printf("Total viscosity /eta/ \t\t %.2lf\n", density * T * dt * ((density/(density-1+exp(-density)))-0.5)/(a*a*a) + m * (density-1+exp(-density))/(12*a*dt));
+	printf("Knudsen number Kn=%.3lf\n",dt * sqrt(T*m_inv)/a); // Kn>>1 is free molecular regime, Kn<<1 is hydrodynamic regime, Kn around 1 is gas rarefaction
+	// export hydrodynamic numbers?
 	printf("--------------------------------\n");
  
 
@@ -739,7 +683,7 @@ int main(int argc, char **argv) {
 	r = gsl_rng_alloc(rngtype);	/* create pointer to instance of a RNG of type rngtype */
 	
 	long int seed = (long int)time(NULL);
-	seed = 1379012447 ;
+	//seed = 1379012447 ;
 	//seed = 1379520223 ;
 	//seed = 1380619236; //Report 1/10/13
 	//#if VERBOSE
@@ -805,7 +749,7 @@ int main(int argc, char **argv) {
 	shift = malloc(3*sizeof(double));
 	if(shift == NULL) {printf("Error allocating shift in mpc.c\n"); exit(EXIT_FAILURE);}
 	
-	
+
 	/*----------------------------------------------------*/
 		
 	/* Initialise */
@@ -881,13 +825,18 @@ int main(int argc, char **argv) {
 	
 	int counter = 0;
 	
-	/* Variables to monitor equilibration*/
-	double momentumPpart[3] = {0.0,0.0,0.0}; //linear momentum per particle, at any given timestep
-	int equilibration_counter=0;
 	#if CHECK_EQUILIBRATION
- 		printf("Timestep \t p_x \t\t p_y \t\t p_z \t\t e_k \n");
+		/* Variables to monitor equilibration*/
+		double momentumPpart[3] = {0.0,0.0,0.0}; //linear momentum per particle, at any given timestep
+		double energyPpart = 0.0;
+		double systemTemp = 0.0;
+		int equilibration_counter=0;
+		FILE * equilibration_fp;
+ 		//fprintf(equilibration_fp,"Timestep \t p_x \t p_y \t p_z \t e_k \n");
+ 		equilibration_fp=fopen("equilibration.dat","w");
+ 		double output[2]={0.0,0.0};
  	#endif
-	double energyPpart = 0.0;
+	
 		
 	
 	
@@ -920,9 +869,13 @@ int main(int argc, char **argv) {
 		t += dt; 
 	
 		/* Set up grid shift */ 
-		shift[0] = a * ( -0.5 + gsl_rng_uniform_pos(r) ) ;
-		shift[1] = a * ( -0.5 + gsl_rng_uniform_pos(r) );
-		shift[2] = a * ( -0.5 + gsl_rng_uniform_pos(r) );	
+		//shift[0] = a * ( -0.5 + gsl_rng_uniform_pos(r) ) ;
+		//shift[1] = a * ( -0.5 + gsl_rng_uniform_pos(r) );
+		//shift[2] = a * ( -0.5 + gsl_rng_uniform_pos(r) );
+		
+		shift[0]=0.0;
+		shift[1]=0.0;
+		shift[2]=0.0;
 
 		/* Collision step */
 		collide(n_part, T, m, m_inv, cylinder, r, c_p, cell_mass, cell_vel, cell_rnd_vel, shift, pos, vel); // BEWARE! the velocity of cells after this is not to be trusted, due to the Galilean shift: it is necessary to undo it!
@@ -959,34 +912,43 @@ int main(int argc, char **argv) {
 		
 		
 
-		#if CHECK_EQUILIBRATION
+		#if 0
 			equilibration_counter++;
 			if(equilibration_counter>20) // export data on total momentum per particle every 10 timesteps
 			{
-				total_momentum_ppart(n_part, m, vel, momentumPpart);
-				energyPpart = total_kinetic_energy_ppart(n_part, m, vel); 
-				printf("%d \t %.4lf \t %.4lf \t %.4lf \t %.4lf\n", i, momentumPpart[0],momentumPpart[1],momentumPpart[2], energyPpart);
+				//total_momentum_ppart(n_part, m, vel, momentumPpart);
+				//energyPpart = total_kinetic_energy_ppart(n_part, m, vel); 
+				//printf("%d \t %.4lf \t %.4lf \t %.4lf \t %.4lf\n", i, momentumPpart[0],momentumPpart[1],momentumPpart[2], energyPpart);
 				equilibration_counter = 0;
 				
 				#if CHECK_TEMPERATURE
 					file_temp_counter++;
-					encage(pos, null_shift, n_part, cylinder, c_p, cell_mass, m, 1, cell_occupation);
+					encage(pos, null_shift, n_part, cylinder, c_p, 1, cell_occupation);
 					check_temperature(cell_occupation, vel, m, n_cells, cell_mass);//recycling vector cell_mass as cell_temp. It is reset to 0 at the start of collide()
 					//export_temp_profile(cell_mass, cylinder, file_temp_counter, i);
 					/* the following line exports exactly the same as above - TESTED OK */
-					export_SAM_data(cell_mass, "./DATA/temperature", cylinder, 0, cylinder.n_cells-1, file_temp_counter, i);
-
+					export_SAM_data(cell_mass, "./DATA/temperatureSAM", cylinder, 0, cylinder.n_cells-1, file_temp_counter, i);
 				#endif
 				
 			}
 		#endif
+		
+		#if CHECK_EQUILIBRATION
+			total_momentum_ppart(n_part, m, vel, momentumPpart);
+			total_kinetic_energy(n_part, m, vel, output); 
+			energyPpart = output[0] /(double)n_part;
+			//systemTemp = (2.0*energyPpart - m_inv*norm_sq(momentumPpart) )/3.0;
+			systemTemp = (2*energyPpart-(momentumPpart[0]*momentumPpart[0]+momentumPpart[1]*momentumPpart[1]+momentumPpart[2]*momentumPpart[2])*m_inv)/3.0;
+			fprintf(equilibration_fp,"%d \t %.4lf \t %.4lf \t %.4lf \t %.4lf \t %.4lf \t %.4lf\n", i, momentumPpart[0],momentumPpart[1],momentumPpart[2], energyPpart,sqrt(output[1])/(double)n_part, systemTemp);
+		#endif
+		
+		
 
 	}/* end for loop (stream-collide steps) */
 
+
 	
-	
-	
-	
+
 	
 	/*------------------------------------------------------------------*/
 	/*	EXITING							    */
@@ -996,6 +958,9 @@ int main(int argc, char **argv) {
 	#if DEBUGGING_STREAMCOLLIDE
 		fclose(debug_fp);//global file pointer
 	#endif
+	#if CHECK_EQUILIBRATION		
+ 		fclose(equilibration_fp);
+ 	#endif
 	
 	free(pos_rmo);
 	free(vel_rmo);

@@ -7,6 +7,6 @@
 cd $PBS_O_WORKDIR
 
 # Execute a.out
-./mpcSim
+./mpcSim input.dat
 
 
