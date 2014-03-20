@@ -13,6 +13,7 @@ Current priorities:
 6.- Implement radial averaging in the velocity profile
 7.- Compare profile with NS results 
 9.- For the velocity profile, calculate the slip predicted with teh SAM and the CAM method. Is the slip reduced with CAM? Compare to Bedkiha paper and MSc thesis.
+10- Test the Maxwell boltzmann RNG
 
 Complete To-do list
 2.- Find out where is the parameter lambda in Whitmers paper

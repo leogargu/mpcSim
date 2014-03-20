@@ -199,20 +199,20 @@ inline int slice_start_index(double x, int nynz, double a)
 
 
 
-/* Calculates the total linear momentum of the system per particle. Returns a 3D vector */
+/* Calculates the total linear momentum of the system per particle. Returns a 3D vector *
 inline void total_momentum_ppart(int n_part, double m, double ** vel, double * momentum)
 {
-	/* Define variables */
+	/* Define variables *
 	int i,j;
 	double factor = 1.0/n_part;
 	
-	/* Initialise output vector */
+	/* Initialise output vector *
 	for(j=0; j<3; j++)
 	{
 		momentum[j]=0.0;
 	}
 	
-	/* Add momentums */
+	/* Add momentums *
 	for( i=0; i<n_part; i++) //loop over particles
 	{
 		for(j=0; j<3; j++) // loop over cartesian components of the velocity
@@ -221,15 +221,59 @@ inline void total_momentum_ppart(int n_part, double m, double ** vel, double * m
 		}
 	}
 	
-	/* Calculate momentum per particle */
+	/* Calculate momentum per particle *
 	for(j=0; j<3; j++)
 	{
 		momentum[j]*=factor;
 	}
 	
+	return; /* Back to main *
+}*/
+
+/* Calculates the total linear momentum of the system per particle. Returns a 3D vector */
+/*momentum_output contains the 3 components of the total momentum, followed by the three variances */
+inline void total_momentum(int n_part, double m, double ** vel, double * momentum_output)
+{
+	/* Define variables */
+	int i,j;
+	double factor = 1.0/(double)n_part;
+	
+	/* Initialise output vector */
+	for(j=0; j<6; j++)
+	{
+		momentum_output[j]=0.0;
+	}
+	
+	/* Add momentums */
+	for( i=0; i<n_part; i++) //loop over particles
+	{
+		for(j=0; j<3; j++) // loop over cartesian components of the velocity
+		{
+			momentum_output[j]+=m*vel[i][j];
+		}
+	}
+	
+	/* Calculate momentum per particle */
+	for(j=0; j<3; j++)
+	{
+		momentum_output[j]*=factor; //momentum per particle
+	}
+	
+	for(i=0; i<n_part; i++)
+	{
+		for(j=3; j<6; j++)
+		{
+			momentum_output[j] += (m*vel[i][j-3] - momentum_output[j-3])*(m*vel[i][j-3] - momentum_output[j-3]);
+		}
+	}
+	
+	for(j=3; j<6; j++)
+	{
+		momentum_output[j]*=factor; //momentum per particle
+	}
+	
 	return; /* Back to main */
 }
-
 
 /* returnd the square norm of a 3D vector v */
 inline double norm_sq(double * v)
@@ -238,6 +282,8 @@ inline double norm_sq(double * v)
 }
 
 /* Calculates the total energy per particle, over the whole system, at the time of the call*/
+/* output vector contains the total kinetic energy of the whole system (output[0]), and the 
+variance (output[1])	*/
 inline void total_kinetic_energy(int n_part, double m, double ** vel, double * output)
 {
 	double energy = 0.0;
@@ -249,16 +295,30 @@ inline void total_kinetic_energy(int n_part, double m, double ** vel, double * o
 		//energy += m * ( vel[i][0]*vel[i][0] + vel[i][1]*vel[i][1] + vel[i][2]*vel[i][2] );
 		energy += m * norm_sq(vel[i]);
 	}
-	energy = 0.5*energy;
+	energy = 0.5*energy/(double)n_part;
 	
 	for(i=0; i<n_part; i++)
 	{
 		sigma += (0.5*m*norm_sq(vel[i])-energy)*(0.5*m*norm_sq(vel[i])-energy);
 	}
+	
+	/*debugging*/
+	/*double aux=0.0;
+	for(i=0; i<n_part; i++)
+	{
+		aux += (0.5*m*norm_sq(vel[i]))*(0.5*m*norm_sq(vel[i]));
+	}
+	
+	aux=aux/(double)(n_part);*/
+	
+	
+	
 	sigma = sigma /(double)n_part;
 	
-	output[0] = energy;
-	output[1] = sigma;
+	/*assert( is_approx_zero((aux-energy*energy)-sigma,1e-5) );*/
+	
+	output[0] = energy; //energy per particle
+	output[1] = sigma; //variance (sigma^2)
 	
 	return;
 }
@@ -539,9 +599,80 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 
 
 
+/* Auxiliary function that calculates the mean velocity in each cell, and stores it in the array cell_u */
+/* cell_vel_output is a n_cellsX3 2D array */
+/*inline void calculate_cell_velocity(int n_cells, int n_part, double ** vel, int * c_p, double * local_density, double ** cell_vel_output )
+{
+	int ci,j,k;
+		
+	/* initialise output array *
+	for(j=0; j<n_cells; j++)
+	{
+		for(k=0; k<3; k++)
+		{
+			cell_vel_output[j][k] = 0.0;
+		}
+	}
+
+	for(i=0; i<n_part; i++)
+	{
+		for(k=0; k<3; k++)
+		{
+			cell_vel_output[ c_p[i] ][ k ] += vel[i][k];
+		}
+	}
+	
+	for(i=0;i<n_cells;i++)
+	{
+		for(k=0;k<3;k++)
+		{
+			cell_vel_output[i][k] /= local_density[i];
+		}
+	}
+	
+	return; //back to main
+}*/
 
 
-
+inline void calculate_cell_velocity(int n_cells, int n_part, double ** vel, int ** cell_occupation, double ** cell_vel_output )
+{
+	int i,j,k;
+	int local_density;
+	
+	
+	/* Initialization */
+	for(i=0; i<n_cells; i++)
+	{
+		for(k=0; k<3; k++)
+		{
+			cell_vel_output[i][k] = 0.0;
+		}
+	}
+	
+	
+	for(i=0; i<n_cells; i++ )
+	{
+		local_density = cell_occupation[i][0];
+		for(k=1; k<=local_density; k++)
+		{
+			for(j=0; j<3; j++)
+			{
+				cell_vel_output[i][j] += vel[ cell_occupation[i][k] ][ j ];
+			}
+		}
+		for(j=0;j<3;j++)
+		{
+			if( local_density != 0 )
+			{
+				cell_vel_output[i][j] /= (double)local_density;
+			}else{
+				cell_vel_output[i][j]=0;
+			}
+		}
+	}
+	
+	return; /* back to main */
+}
 
 
 /*-------------------------------*/
@@ -550,7 +681,7 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 
 int main(int argc, char **argv) {
 	
-	int i=0,j=0; 		 	/* Generic loop counters */
+	int i=0,j=0,k=0; 		 	/* Generic loop counters */
 	
 	FILE * input_fp;
 	input_fp = fopen(argv[1],"r");
@@ -563,7 +694,7 @@ int main(int argc, char **argv) {
 	double variable_array[10];
 	while (fscanf(input_fp, "%s\t%lf", variable_name, &value) == 2) {
 		
-		printf("reading variable %s = %.3lf\n",variable_name, value);
+		//printf("reading variable %s = %.3lf\n",variable_name, value);
 		variable_array[i] = value;
 		i++;
   	}
@@ -715,12 +846,29 @@ int main(int argc, char **argv) {
 	if (cell_vel==NULL) {printf("Error allocating cell_vel in mpc.c\n"); exit(EXIT_FAILURE);}
 	cell_rnd_vel = malloc( n_cells * sizeof(double*) );
 	if (cell_rnd_vel==NULL) {printf("Error allocating cell_rnd_vel in mpc.c\n"); exit(EXIT_FAILURE);}
+	
+	#if CHECK_MOMENTUM_CONSERVATION
+		// auxiliary arrays for checking collide 
+		double ** cell_vel_beforecollide;
+		double * cell_vel_beforecollide_rmo;
+		double ** cell_vel_aftercollide;
+		double * cell_vel_aftercollide_rmo;
+	
+		cell_vel_beforecollide_rmo=malloc( 3 * n_cells * sizeof(double) );
+		if (cell_vel_beforecollide_rmo==NULL) {printf("Error allocating cell_vel_beforecollide_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
+		cell_vel_beforecollide = malloc( n_cells * sizeof(double*) );
+		if (cell_vel_beforecollide==NULL) {printf("Error allocating cell_vel_beforecollide in mpc.c\n"); exit(EXIT_FAILURE);}
 		
+		cell_vel_aftercollide_rmo=malloc( 3 * n_cells*sizeof(double) );
+		if (cell_vel_aftercollide_rmo==NULL) {printf("Error allocating cell_vel_aftercollide_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
+		cell_vel_aftercollide = malloc( n_cells * sizeof(double*) );
+		if (cell_vel_aftercollide==NULL) {printf("Error allocating cell_vel_aftercollide in mpc.c\n"); exit(EXIT_FAILURE);}
+	#endif
 	// If not checking the temperature this is not needed: create a dummy pointer for encage() and carry on
 	int ** cell_occupation;
 	int * cell_occupation_rmo;
 	int max_oc = (int)(density * DENSITY_TOL);
-	cell_occupation_rmo=malloc(max_oc*cylinder.n_cells*sizeof(int));
+	cell_occupation_rmo=malloc(max_oc*n_cells*sizeof(int));
 	if (cell_occupation_rmo==NULL) {printf("Error allocating cell_occupation_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
 	cell_occupation = malloc(n_cells*sizeof(int*));
 	if (cell_occupation==NULL) {printf("Error allocating cell_occupation in mpc.c\n"); exit(EXIT_FAILURE);}
@@ -732,6 +880,11 @@ int main(int argc, char **argv) {
 		cell_rnd_vel[i] = &cell_rnd_vel_rmo[3*i];
 		/* Initialization is done at the beginning of collide() */
 		cell_occupation[i] = &cell_occupation_rmo[max_oc*i];
+		
+		#if CHECK_MOMENTUM_CONSERVATION
+			cell_vel_beforecollide[i]=&cell_vel_beforecollide_rmo[3*i];
+			cell_vel_aftercollide[i]=&cell_vel_aftercollide_rmo[3*i];
+		#endif
 	}
 		
 	int * c_p;				/// c_p[i] is the cell index of particle i 
@@ -827,7 +980,7 @@ int main(int argc, char **argv) {
 	
 	#if CHECK_EQUILIBRATION
 		/* Variables to monitor equilibration*/
-		double momentumPpart[3] = {0.0,0.0,0.0}; //linear momentum per particle, at any given timestep
+		double momentumPpart[6] = {0.0,0.0,0.0,0.0,0.0,0.0}; //linear momentum per particle, at any given timestep, followed by the variances
 		double energyPpart = 0.0;
 		double systemTemp = 0.0;
 		int equilibration_counter=0;
@@ -835,6 +988,8 @@ int main(int argc, char **argv) {
  		//fprintf(equilibration_fp,"Timestep \t p_x \t p_y \t p_z \t e_k \n");
  		equilibration_fp=fopen("equilibration.dat","w");
  		double output[2]={0.0,0.0};
+ 		
+ 		fprintf(equilibration_fp,"%s %6s %8s %8s %8s %8.s %8s %8s %8s %8s\n","t","px","sigma(px)","py","sigma(py)","pz","sigma(pz)","ek","sigma(ek)","T");
  	#endif
 	
 		
@@ -847,6 +1002,14 @@ int main(int argc, char **argv) {
 	#if CHECK_TEMPERATURE
 		int file_temp_counter = 0;
 	#endif
+	
+	
+	#if GALILEAN_SHIFT == 0
+		shift[0] = 0.0;
+		shift[1] = 0.0;
+		shift[2] = 0.0;
+	#endif
+	
 	/* Loop for a fixed number of times */
 	for(i=1; i<= steps; i++)
 	{
@@ -867,19 +1030,42 @@ int main(int argc, char **argv) {
 
 		/* Update timestep */
 		t += dt; 
-	
-		/* Set up grid shift */ 
-		//shift[0] = a * ( -0.5 + gsl_rng_uniform_pos(r) ) ;
-		//shift[1] = a * ( -0.5 + gsl_rng_uniform_pos(r) );
-		//shift[2] = a * ( -0.5 + gsl_rng_uniform_pos(r) );
-		
-		shift[0]=0.0;
-		shift[1]=0.0;
-		shift[2]=0.0;
 
+		#if GALILEAN_SHIFT
+			shift[0] = a * ( -0.5 + gsl_rng_uniform_pos(r) ) ;
+			shift[1] = a * ( -0.5 + gsl_rng_uniform_pos(r) );
+			shift[2] = a * ( -0.5 + gsl_rng_uniform_pos(r) );
+		#endif
+		
 		/* Collision step */
+		
+		//AQUI
+		#if CHECK_MOMENTUM_CONSERVATION
+			encage(pos, shift, n_part, cylinder, c_p, 1 , cell_occupation);
+			calculate_cell_velocity(n_cells, n_part, vel, cell_occupation, cell_vel_beforecollide );
+		#endif	
 		collide(n_part, T, m, m_inv, cylinder, r, c_p, cell_mass, cell_vel, cell_rnd_vel, shift, pos, vel); // BEWARE! the velocity of cells after this is not to be trusted, due to the Galilean shift: it is necessary to undo it!
 		// c_p contains the occupation information, but with the Galilean shift: if we wanted to use it, we would need to undo it.		
+		
+		#if CHECK_MOMENTUM_CONSERVATION
+			calculate_cell_velocity(n_cells, n_part, vel, cell_occupation, cell_vel_aftercollide );
+
+			for(j=0;j<n_cells;j++)
+			{
+				for(k=0;k<3;k++)
+				{
+					assert( is_approx_zero(cell_vel_aftercollide[j][k] - cell_vel_beforecollide[j][k],1e-6 ) );
+					/*if( is_approx_zero(cell_vel_aftercollide[j][k] - cell_vel_beforecollide[j][k],1e-5 )  )
+					{ //do nothing 
+					}else{
+						printf("Not zero: %lf\n Aborting...\n",cell_vel_aftercollide[j][k] - cell_vel_beforecollide[j][k]);
+						exit(EXIT_FAILURE);
+					}*/
+				}
+			}
+		#endif
+		
+		
 		
 		#if DEBUGGING_STREAMCOLLIDE
 			export_data(debug_fp, pos , n_part );
@@ -934,12 +1120,14 @@ int main(int argc, char **argv) {
 		#endif
 		
 		#if CHECK_EQUILIBRATION
-			total_momentum_ppart(n_part, m, vel, momentumPpart);
+			total_momentum(n_part, m, vel, momentumPpart);
 			total_kinetic_energy(n_part, m, vel, output); 
-			energyPpart = output[0] /(double)n_part;
 			//systemTemp = (2.0*energyPpart - m_inv*norm_sq(momentumPpart) )/3.0;
-			systemTemp = (2*energyPpart-(momentumPpart[0]*momentumPpart[0]+momentumPpart[1]*momentumPpart[1]+momentumPpart[2]*momentumPpart[2])*m_inv)/3.0;
-			fprintf(equilibration_fp,"%d \t %.4lf \t %.4lf \t %.4lf \t %.4lf \t %.4lf \t %.4lf\n", i, momentumPpart[0],momentumPpart[1],momentumPpart[2], energyPpart,sqrt(output[1])/(double)n_part, systemTemp);
+			systemTemp = (2*output[0]-
+				(momentumPpart[0]*momentumPpart[0]+momentumPpart[1]*momentumPpart[1]+momentumPpart[2]*momentumPpart[2])*m_inv)/3.0;
+			fprintf(equilibration_fp,"%d %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf\n", 
+				i, momentumPpart[0], sqrt(momentumPpart[3]), momentumPpart[1], sqrt(momentumPpart[4]), momentumPpart[2], 
+				sqrt(momentumPpart[5]), output[0], sqrt(output[1]), systemTemp);
 		#endif
 		
 		
@@ -977,6 +1165,12 @@ int main(int argc, char **argv) {
 	free(shift);
 	free(cell_occupation_rmo);
 	free(cell_occupation);
+	#if CHECK_MOMENTUM_CONSERVATION
+		free(cell_vel_beforecollide_rmo);
+		free(cell_vel_beforecollide);
+		free(cell_vel_aftercollide_rmo);
+		free(cell_vel_aftercollide);
+	#endif
 
 	gsl_rng_free(r); /* free memory associated with the rng r */
 

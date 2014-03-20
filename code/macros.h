@@ -31,11 +31,11 @@ and accelerations of all particles. It also exports auxiliary vtk files: collisi
 #define EXPORT_STATES 0
 
 /* Exports files to do CAM average over a x_slice, ready to plot the parabolic profile of POiseuille flow */
-#define EXPORT_VEL_PROFILE 1
+#define EXPORT_VEL_PROFILE 0
 
 /* Checks, at every timestep, that the instantaneous density at any collision cell is less than DENSITY_TOLxInitial density */
 #define CHECK_COMPRESSIBILITY 1
-#define DENSITY_TOL 10
+#define DENSITY_TOL 5
 
 /* Exports a file, at regular timesteps, containing the temperature in each collision cell. */
 #define CHECK_TEMPERATURE 0
@@ -44,14 +44,17 @@ and accelerations of all particles. It also exports auxiliary vtk files: collisi
 at every timestep. Redo calculations using the script.pbs.oXXX file data, which includes all geometrical data and the RNG seed. */
 #define CHECK_EQUILIBRATION 1
 
-
-
+/* Turns the shift of the grid prior to each collision step on/off*/
+#define GALILEAN_SHIFT 1
 
 #if DEBUGGING_STREAMCOLLIDE
 	/* Global file pointer */
 	#include <stdio.h>
 	FILE * debug_fp;
 #endif
+
+/* checks momentum is conserved during collide */
+#define CHECK_MOMENTUM_CONSERVATION 1
 
 
 /* This function checks whether a double is zero. This function is not necessary and its code can be changed

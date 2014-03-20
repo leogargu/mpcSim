@@ -89,6 +89,9 @@ inline int pos2cell_idx(const Geometry geometry, const double * pos, const doubl
 
 
 
+
+
+
 /* The collide step does not change the positions of the particles. */
 void collide(const int n_part, const double T, const double m, const double m_inv, Geometry geometry, gsl_rng * r, 
 	int * c_p, double * cell_mass ,double ** cell_vel, double ** cell_rnd_vel, double * shift, double ** pos, double ** vel)
@@ -125,7 +128,7 @@ void collide(const int n_part, const double T, const double m, const double m_in
 		/* Vector components are uncorrelated */
 		double rnd_vel[3] ={ gsl_ran_gaussian_ziggurat(r, sqrt(T * m_inv) ) ,
 				     gsl_ran_gaussian_ziggurat(r, sqrt(T * m_inv) ) ,
-			   	     gsl_ran_gaussian_ziggurat(r, sqrt(T * m_inv) ) };    /* zero mean */
+		gsl_ran_gaussian_ziggurat(r, sqrt(T * m_inv) ) };    /* zero mean: important for matching gaussian distribution with maxwell-bolztmann */
    	   			
 		#if DEBUGGING_STREAMCOLLIDE
 			fprintf(debug_fp,"%lf \t %lf \t %lf \t",rnd_vel[0],rnd_vel[1],rnd_vel[2]);	
@@ -202,7 +205,9 @@ void collide(const int n_part, const double T, const double m, const double m_in
 	}
 	
 	/* cell_vell still contains the average momentum (velocity if all masses of plasma particles are equal) when collide() returns to main */
-	/* Likewise, c_p is up to date and available outside collide. */
+	/* Likewise, c_p and cell_mass are up to date and available outside collide (in the shifted grid). */
+	
+
 }
 
 
