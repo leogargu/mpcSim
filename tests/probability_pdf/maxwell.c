@@ -38,7 +38,10 @@ int main(int argc, char **argv) {
 	double m_inv = 1.0;
 	double T = 1.0;
 	
-
+	int test;
+	
+	if( atoi(argv[1]) == 1 )
+	{
 	int bin_num = 200; //this must be even
 	
 	assert( bin_num%2 == 0.0 );
@@ -104,7 +107,26 @@ int main(int argc, char **argv) {
 	}
 		
 	fclose(fp);
-	
+	}else if(atoi(argv[1]) == 2 )
+	{
+		double sigma_sq = 0.0;
+		int i;
+		double aux;
+		int max=10000;
+		
+		for(i=0; i<max; i++)
+		{
+			aux = gsl_ran_gaussian_ziggurat(r, sqrt(T * m_inv) );
+			sigma_sq += aux*aux;
+		}
+		
+		printf("Sigma set to %lf, sigma estimated as %lf\n",T*m_inv,sigma_sq/(double)max);
+		
+		
+		
+	}else{
+		printf("Argument was %d, call with 1 or 2\n",atoi(argv[1]));
+	}
 	
 	
 	

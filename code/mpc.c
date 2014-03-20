@@ -361,20 +361,15 @@ inline void encage(double ** pos, double * shift, int n_part, Geometry cylinder,
 			cell_occupation[i][0] =0;
 		}
 	}
-	
-	/*for(i=0; i<cylinder.n_cells; i++)
-	{
-		cell_mass[i] = 0.0;
-	}*/
+
 	
 	for(i=0; i<n_part; i++)
 	{
 		cell_idx = pos2cell_idx(cylinder, pos[i], shift );// canonize is included here, and check of being outside of the cylinder too
 		c_p[i] = cell_idx;
-		//cell_mass[cell_idx]+=m; //this line...
 		if(calculate_cell_occupation)
 		{
-			cell_occupation[cell_idx][0]++;//...and this line are equivalent
+			cell_occupation[cell_idx][0]++;
 			cell_occupation[cell_idx][cell_occupation[cell_idx][0]] = i;
 		}
 	}
@@ -599,41 +594,6 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 
 
 
-/* Auxiliary function that calculates the mean velocity in each cell, and stores it in the array cell_u */
-/* cell_vel_output is a n_cellsX3 2D array */
-/*inline void calculate_cell_velocity(int n_cells, int n_part, double ** vel, int * c_p, double * local_density, double ** cell_vel_output )
-{
-	int ci,j,k;
-		
-	/* initialise output array *
-	for(j=0; j<n_cells; j++)
-	{
-		for(k=0; k<3; k++)
-		{
-			cell_vel_output[j][k] = 0.0;
-		}
-	}
-
-	for(i=0; i<n_part; i++)
-	{
-		for(k=0; k<3; k++)
-		{
-			cell_vel_output[ c_p[i] ][ k ] += vel[i][k];
-		}
-	}
-	
-	for(i=0;i<n_cells;i++)
-	{
-		for(k=0;k<3;k++)
-		{
-			cell_vel_output[i][k] /= local_density[i];
-		}
-	}
-	
-	return; //back to main
-}*/
-
-
 inline void calculate_cell_velocity(int n_cells, int n_part, double ** vel, int ** cell_occupation, double ** cell_vel_output )
 {
 	int i,j,k;
@@ -672,6 +632,33 @@ inline void calculate_cell_velocity(int n_cells, int n_part, double ** vel, int 
 	}
 	
 	return; /* back to main */
+}
+
+
+
+
+/* Calculates the distribution of particles in the whole domain. The output vector densities has length=n_cells,
+ and contains the number of particles found in each cell, for the given timestep.		*/
+inline void density_distribution(int n_part, double m, double ** pos, Geometry geometry, double * shift, double * densities )
+{
+	int i;
+	int cell_idx;
+	double factor=1.0/geometry.a;
+	
+	/* Clean array*/
+	for(i=0; i<geometry.n_cells; i++)
+	{
+		densities[i] = 0.0;
+	}
+
+	for(i=0; i<n_part; i++)
+	{
+		cell_idx = pos2cell_idx(geometry, pos[i], shift );// canonize is included here, and check of being outside of the cylinder too
+		assert( cell_idx>= 0 && cell_idx <= geometry.n_cells);
+		densities[cell_idx] += factor * m;
+	}
+	
+	return; /* Back to main*/
 }
 
 
@@ -765,6 +752,7 @@ int main(int argc, char **argv) {
 	double ** acc;
 	double ** cell_vel;
 	double ** cell_rnd_vel;
+	double * densities;
 		
 	/* Check parameter values are compatible */
 	if( fmod(Lx,a) != (double)0.0 ){
@@ -846,6 +834,9 @@ int main(int argc, char **argv) {
 	if (cell_vel==NULL) {printf("Error allocating cell_vel in mpc.c\n"); exit(EXIT_FAILURE);}
 	cell_rnd_vel = malloc( n_cells * sizeof(double*) );
 	if (cell_rnd_vel==NULL) {printf("Error allocating cell_rnd_vel in mpc.c\n"); exit(EXIT_FAILURE);}
+	
+	densities = malloc(n_cells * sizeof(double));
+	if (densities==NULL){ printf("Error allocating densities in mpc.c\n"); exit(EXIT_FAILURE); }
 	
 	#if CHECK_MOMENTUM_CONSERVATION
 		// auxiliary arrays for checking collide 
@@ -987,7 +978,7 @@ int main(int argc, char **argv) {
 		FILE * equilibration_fp;
  		//fprintf(equilibration_fp,"Timestep \t p_x \t p_y \t p_z \t e_k \n");
  		equilibration_fp=fopen("equilibration.dat","w");
- 		double output[2]={0.0,0.0};
+ 		double total_energy[2]={0.0,0.0};
  		
  		fprintf(equilibration_fp,"%s %6s %8s %8s %8s %8.s %8s %8s %8s %8s\n","t","px","sigma(px)","py","sigma(py)","pz","sigma(pz)","ek","sigma(ek)","T");
  	#endif
@@ -1102,9 +1093,6 @@ int main(int argc, char **argv) {
 			equilibration_counter++;
 			if(equilibration_counter>20) // export data on total momentum per particle every 10 timesteps
 			{
-				//total_momentum_ppart(n_part, m, vel, momentumPpart);
-				//energyPpart = total_kinetic_energy_ppart(n_part, m, vel); 
-				//printf("%d \t %.4lf \t %.4lf \t %.4lf \t %.4lf\n", i, momentumPpart[0],momentumPpart[1],momentumPpart[2], energyPpart);
 				equilibration_counter = 0;
 				
 				#if CHECK_TEMPERATURE
@@ -1121,13 +1109,19 @@ int main(int argc, char **argv) {
 		
 		#if CHECK_EQUILIBRATION
 			total_momentum(n_part, m, vel, momentumPpart);
-			total_kinetic_energy(n_part, m, vel, output); 
+			total_kinetic_energy(n_part, m, vel, total_energy); 
 			//systemTemp = (2.0*energyPpart - m_inv*norm_sq(momentumPpart) )/3.0;
-			systemTemp = (2*output[0]-
+			systemTemp = (2*total_energy[0]-
 				(momentumPpart[0]*momentumPpart[0]+momentumPpart[1]*momentumPpart[1]+momentumPpart[2]*momentumPpart[2])*m_inv)/3.0;
 			fprintf(equilibration_fp,"%d %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf\n", 
 				i, momentumPpart[0], sqrt(momentumPpart[3]), momentumPpart[1], sqrt(momentumPpart[4]), momentumPpart[2], 
-				sqrt(momentumPpart[5]), output[0], sqrt(output[1]), systemTemp);
+				sqrt(momentumPpart[5]), total_energy[0], sqrt(total_energy[1]), systemTemp);
+			
+			density_distribution(n_part, m, pos, cylinder, null_shift, densities );
+			export_SAM_data(densities, "./DATA/density", cylinder, 0, cylinder.n_cells-1, i, i);
+
+			//AQUI print to file with i
+
 		#endif
 		
 		
@@ -1165,6 +1159,7 @@ int main(int argc, char **argv) {
 	free(shift);
 	free(cell_occupation_rmo);
 	free(cell_occupation);
+	free(densities);
 	#if CHECK_MOMENTUM_CONSERVATION
 		free(cell_vel_beforecollide_rmo);
 		free(cell_vel_beforecollide);
