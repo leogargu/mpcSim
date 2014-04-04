@@ -324,16 +324,19 @@ inline void total_kinetic_energy(int n_part, double m, double ** vel, double * o
 }
 
 
+
 /* Control routine that checks for compressibility effects: it stopsthe simulation if, at the time of being invoked, the density in any 
-   collision cell is greater than DENSITY_TOL x initial density */
+   collision cell is greater than density+X or smaller than density-X with X=DENSITY_TOL*density */
 /* Notice this can be called without undoing the shift after collide */
 /* NOT TESTED */
 inline void check_compressibility(double * cell_mass, int n_cells, double m_inv, double density)
 {
 	int ci;
+	double tolerance = DENSITY_TOL*density;
 	for(ci=0; ci< n_cells; ci++)
 	{
-		if(m_inv*cell_mass[ci] > DENSITY_TOL*density)
+		//if(m_inv*cell_mass[ci] > DENSITY_TOL*density)
+		if(m_inv*cell_mass[ci] > (density+tolerance) || m_inv*cell_mass[ci] < (density-tolerance) )
 		{
 			fprintf(stderr,"Compressibility effects exceeded tolerance: *shifted* cell %d has instantaneous density of %.2lf\n",ci,cell_mass[ci]*m_inv);
 			exit(EXIT_FAILURE);
@@ -593,7 +596,12 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 
 
 
-
+////////////////////////////////////////////////////
+/// Calculates the mean velocity of each cell at the time of being called (instantaneous mean velocity).
+/// Input: cell_occupation, 2D array cointaining in row j the total number of particles found in that cell, followed by 
+///        the indices of those particles. This array can be produced calling encage()
+/// Output: cell_vel_output, n_cells X 3 array
+////////////////////////////////////////////////////
 inline void calculate_cell_velocity(int n_cells, int n_part, double ** vel, int ** cell_occupation, double ** cell_vel_output )
 {
 	int i,j,k;
@@ -697,6 +705,8 @@ int main(int argc, char **argv) {
 	const int steps = variable_array[8];	/// Number of steps in the simulation
 	int equilibration_time = variable_array[9]; 
 	
+	
+	int equilibration_export = 10;
 	fclose(input_fp);
 	/*------------------------------------------------------------------*/
 	/*	SETUP							    */
@@ -1108,20 +1118,27 @@ int main(int argc, char **argv) {
 		#endif
 		
 		#if CHECK_EQUILIBRATION
-			total_momentum(n_part, m, vel, momentumPpart);
-			total_kinetic_energy(n_part, m, vel, total_energy); 
+			equilibration_counter++;
+			if( equilibration_counter >= equilibration_export ){
+			//total_momentum(n_part, m, vel, momentumPpart);
+			//total_kinetic_energy(n_part, m, vel, total_energy); 
 			//systemTemp = (2.0*energyPpart - m_inv*norm_sq(momentumPpart) )/3.0;
-			systemTemp = (2*total_energy[0]-
+			//systemTemp = (2*total_energy[0]-
 				(momentumPpart[0]*momentumPpart[0]+momentumPpart[1]*momentumPpart[1]+momentumPpart[2]*momentumPpart[2])*m_inv)/3.0;
-			fprintf(equilibration_fp,"%d %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf\n", 
+			/*fprintf(equilibration_fp,"%d %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf\n", 
 				i, momentumPpart[0], sqrt(momentumPpart[3]), momentumPpart[1], sqrt(momentumPpart[4]), momentumPpart[2], 
-				sqrt(momentumPpart[5]), total_energy[0], sqrt(total_energy[1]), systemTemp);
+				sqrt(momentumPpart[5]), total_energy[0], sqrt(total_energy[1]), systemTemp);*/
 			
-			density_distribution(n_part, m, pos, cylinder, null_shift, densities );
-			export_SAM_data(densities, "./DATA/density", cylinder, 0, cylinder.n_cells-1, i, i);
-
-			//AQUI print to file with i
-
+			/* Density distribution */	
+			//density_distribution(n_part, m, pos, cylinder, null_shift, densities );
+			//export_SAM_data(densities, "./DATA/density", cylinder, 0, cylinder.n_cells-1, i, i);
+			/* Velocity profile */
+			encage(pos, shift, n_part, cylinder, c_p, 1 , cell_occupation);
+			calculate_cell_velocity(n_cells, n_part, vel, cell_occupation, cell_vel );
+			export_data(cell_vel,"./DATA/vel_equi",cylinder,0,cylinder.n_cells-1,i,i);
+			equilibration_counter=0;
+			}
+			
 		#endif
 		
 		
