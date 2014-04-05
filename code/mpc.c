@@ -42,8 +42,29 @@
 
 // 0,1,2 equivalent to x, y, z
 
-/* Adapted from: */
-// http://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly
+//////////////////////////////////////////////////////////////////////////
+/// Returns the norm squared of a 3D vector 
+//////////////////////////////////////////////////////////////////////////
+inline double norm_sq(double * v)
+{
+	return v[0]*v[0]+v[1]*v[1]+v[2]*v[2];
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// Given a value of x, this function returns the global index of the first cell (bottom right) in the slice corresponding to that x.
+/// nynz is the product of the number of cells in the y direction and in the z direction. a is the length of a side of each cubic collision cell. 
+/// That slice includes the cells of indices from slice_start_index return to that value-1+nynz, inclusive.
+//////////////////////////////////////////////////////////////////////////
+inline int slice_start_index(double x, int nynz, double a)
+{	
+	return nynz*(int)floor(x/a);
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// Generates a random position vector uniformly distributed inside of the cylinder given by the Geometry struct
+/// Output: pos
+/// Adapted from: http://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly
+//////////////////////////////////////////////////////////////////////////
 inline void populate(gsl_rng * r, Geometry cylinder, double * pos) //could be modified using the fact that the sum of two uniformly distributed numbers is symmetrically triangularly distributed
 {
 	double t,u,rvar;
@@ -67,40 +88,35 @@ inline void populate(gsl_rng * r, Geometry cylinder, double * pos) //could be mo
 	return; /* back to main */
 }
 
-
-/* Exports the positions/velocities/accelerations of all particles at a given timestep */
-/* export is done in ASCII or BINARY depending on the value of the constant
-   BINARY_EXPORT defined in macros.h					*/
-/* This function is a helpful auxiliary tool, even if not used in a particular version of mpcSIM: DO NOT DELETE*/
-inline void export_data(FILE * fp, double ** data ,int length )//length=n_part or n_cells
+/* Notice this can be called without undoing the shift after collide */
+/* NOT TESTED */
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Control routine that checks for compressibility effects: it stopsthe simulation if, at the time of being invoked, the density in any 
+/// collision cell is greater than density+X or smaller than density-X with X=DENSITY_TOL*density.
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+inline void check_compressibility(double * cell_mass, int n_cells, double m_inv, double density)
 {
-	int i;
-	
-	for(i=0; i<length; i++)
+	int ci;
+	double tolerance = DENSITY_TOL*density;
+	for(ci=0; ci< n_cells; ci++)
 	{
-		#if BINARY_EXPORT
-			fwrite(&(data[i][0]), sizeof(double), 3, fp);
-		#else
-			fprintf(fp,"%.6lf \t %.6lf \t %.6lf \t",data[i][0],data[i][1],data[i][2]);
-		#endif
+		//if(m_inv*cell_mass[ci] > DENSITY_TOL*density)
+		if(m_inv*cell_mass[ci] > (density+tolerance) || m_inv*cell_mass[ci] < (density-tolerance) )
+		{
+			fprintf(stderr,"Compressibility effects exceeded tolerance: *shifted* cell %d has instantaneous density of %.2lf\n",ci,cell_mass[ci]*m_inv);
+			exit(EXIT_FAILURE);
+		}
 	}
-	#if BINARY_EXPORT
-		char str[]="\n";
-		fwrite(str,sizeof(char),sizeof(str),fp);
-	#else
-		fprintf(fp,"\n");
-	#endif
 	
-	return; /* back to main */
+	return; /* Back to main*/
 }
 
 
-
-
-
-/* It writes a VTK file with positions and velocities of all particles */
 /* TODO: at the moment the export is done in ASCII only, binary option has not been implemented yet*/
 /* possible to do by keeping the lines in ASCII and writing the data (only) in binary to the same file stream*/
+//////////////////////////////////////////////////////////////////////////
+/// It writes a VTK file with positions and velocities of all particles 
+//////////////////////////////////////////////////////////////////////////
 inline void export_vtk_plasma(int id, double ** pos, double ** vel,double ** acc, int n_part)
 {
 	int i;
@@ -159,26 +175,38 @@ inline void export_vtk_plasma(int id, double ** pos, double ** vel,double ** acc
 }
 
 
-
-/* This exports the VTK file defining the grid used (not the vessel) */
-/* This is called only once at the start of the simulation. It exports in ASCII*/
+/* 
 /* No need to do in in binary, unless the geometry becomes much more complicated (i.e. some triangulated surface)*/
 /* NOTE that if the directory DATA is not present, the program crashes with a Segmentation Fault */
+//////////////////////////////////////////////////////////////////////////
+/// This exports the VTK file defining the grid used (not the vessel) 
+/// This is called only once at the start of the simulation. It exports in ASCII.
+//////////////////////////////////////////////////////////////////////////
 inline void export_vtk_gid(Geometry cylinder)
 {
 	FILE * fp;
 	fp = fopen("./DATA/collision_grid.vtk","w");
+	if( fp == NULL )
+	{
+		printf("export_vtk_grid: Error opening ./DATA/collision_grid.vtk. Check directory exists. Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
 	fprintf(fp,"# vtk DataFile Version 2.0\nGrid representation\nASCII \nDATASET STRUCTURED_POINTS\nDIMENSIONS %d %d %d\nORIGIN 0 0 0\nSPACING %.1lf %.1lf %.1lf",cylinder.n_cells_dim[0]+1,cylinder.n_cells_dim[1]+1,cylinder.n_cells_dim[2]+1,cylinder.a,cylinder.a,cylinder.a);
 	fclose(fp);	
 }
 
-
-/* This function exports the data necessary for the python script to generate a
- cylinder of the right dimensions on paraview					*/
+//////////////////////////////////////////////////////////////////////////
+/// This function exports the data necessary for the python script to generate a cylinder of the right dimensions on paraview.
+//////////////////////////////////////////////////////////////////////////					
 inline void export_vessel_geometry(Geometry cylinder, int num_steps)
 {
 	FILE * fp;
 	fp = fopen("./DATA/vessel_geometry.py","w");
+	if( fp == NULL )
+	{
+		printf("export_vessel_geometry: Error opening ./DATA/vessel_geometry.vtk. Check directory exists. Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
 	fprintf(fp,"# Cylinder data\n");
 	fprintf(fp,"Lx=%lf\n",cylinder.Lx);
 	fprintf(fp,"L=%lf\n",cylinder.L);
@@ -189,46 +217,177 @@ inline void export_vessel_geometry(Geometry cylinder, int num_steps)
 	fclose(fp);
 }
 
-/*nynz is the product of the number of cells in the y direction and in the z direction*/
-/* a is the length of a side of each cubic collision cell*/
-/* That slice includes the cells of indices from slice_start_index return to that value-1+nynz, inclusive*/
-inline int slice_start_index(double x, int nynz, double a)
-{	
-	return nynz*(int)floor(x/a);
+/* export is done in ASCII or BINARY depending on the value of the constant
+   BINARY_EXPORT defined in macros.h					*/
+/* This function is a helpful auxiliary tool, even if not used in a particular version of mpcSIM: DO NOT DELETE*/
+//////////////////////////////////////////////////////////////////////////
+/// Exports the lengthx3 array data into a file given by the pointer fp.
+/// Can be used to export the positions/velocities/accelerations of all particles at a given timestep. 
+//////////////////////////////////////////////////////////////////////////
+inline void export_data(FILE * fp, double ** data ,int length )//length=n_part or n_cells
+{
+	int i;
+	
+	for(i=0; i<length; i++)
+	{
+		#if BINARY_EXPORT
+			fwrite(&(data[i][0]), sizeof(double), 3, fp);
+		#else
+			fprintf(fp,"%.6lf \t %.6lf \t %.6lf \t",data[i][0],data[i][1],data[i][2]);
+		#endif
+	}
+	#if BINARY_EXPORT
+		char str[]="\n";
+		fwrite(str,sizeof(char),sizeof(str),fp);
+	#else
+		fprintf(fp,"\n");
+	#endif
+	
+	return; /* back to main */
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+///  This function exports the data contained in the array data in a file format suitable for calculating a SAM average with average.c 
+///  Input: data - array of length l, containing the value of a scalar property. l = cell_end-cell_start+1
+///  This function will export the section of the data array specified by cell_start and cell_end.
+//////////////////////////////////////////////////////////////////////////
+inline void export_SAM_data_scalar(double * data, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
+{
+	int i;
+	FILE * file_fp;
+	char file_name[50];
+	char filename1[50]="";
+	strcpy(filename1,filename);
+	strcat(filename1,"_%d.dat");
+	snprintf(file_name,sizeof(char)*30,filename1,file_number);
+	
+	
+	file_fp=fopen(file_name,"w");
+	if( file_fp ==NULL )
+	{
+		printf("export_SAM_data_scalar: Error opening file. Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
+	//int num_cells = cell_end - cell_start +1;
+	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n",geometry.n_cells_dim[0],geometry.n_cells_dim[1],geometry.n_cells_dim[2], cell_start, cell_end, step);
+	for(i=cell_start; i<=cell_end; i++)
+	{
+		fprintf(file_fp,"%lf\t",data[i]);
+	}
+
+	fclose(file_fp);		
+		
+	return; /* back to main*/
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+///  This function exports the data contained in the array data in a file format suitable for calculating a SAM average with average.c 
+///  Input: data - array of length l, containing the value of a vector property. l = cell_end-cell_start+1
+///  This function will export the section of the data array specified by cell_start and cell_end.
+//////////////////////////////////////////////////////////////////////////
+inline void export_SAM_data_vector(double ** data, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
+{// Shame there's no overloading in C...
+	int i;
+	FILE * file_fp;
+	char file_name[50];
+	char filename1[50]="";
+	strcpy(filename1,filename);
+	strcat(filename1,"_%d.dat");
+	snprintf(file_name,sizeof(char)*30,filename1,file_number);
+	
+	
+	file_fp=fopen(file_name,"w");
+	if( file_fp ==NULL )
+	{
+		printf("export_SAM_data_vector: Error opening file. Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
+	//int num_cells = cell_end - cell_start +1;
+	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n",geometry.n_cells_dim[0],geometry.n_cells_dim[1],geometry.n_cells_dim[2], cell_start, cell_end, step);
+	for(i=cell_start; i<=cell_end; i++)
+	{
+		fprintf(file_fp,"%lf\t %lf\t %lf\n",data[i][0],data[i][1],data[i][2]);
+	}
+
+	fclose(file_fp);		
+		
+	return; /* back to main*/
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// This function exports the data contained in the array data in a file format suitable for calculating a CAM average with average.c.
+/// The array data is a 2D array with each row containing the scalar/vector values of interest for the particles in the corresponding collision cell. 
+/// Cells are stored in consecutive order. The occupation numbers (local instantaneous densities), ie length of the rows, are stored in the array of 
+/// ints local_density.
+/// Input: 
+/// data: (cells)x(variable+1) array containing the data to be exported to file. Each row corresponds to a cell. data[ci][0] is the local density in cell ci. alpha is 
+/// the number of particles in each cell (data[ci][0]=alpha). If data is scalar, an example could be: 3 e1 e2 e3, for row ci. If the quantity is a vector, for example teh velocities, 
+/// the the row for cell ci would look like: 3 v1x v1y v1z v2x v2y v2z v3x v3y v3z.
+/// file_number: number to include in the file name
+/// step: timestep at which this data was gathered
+//////////////////////////////////////////////////////////////////////////
+/*NOT TESTED*/
+inline void export_CAM_data(int is_scalar, double ** data, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
+{
+	FILE * fp;
+	char file_name[50];
+	char filename1[50]="";
+	strcpy(filename1,filename);
+	strcat(filename1,"_%d.dat");
+	snprintf(file_name,sizeof(char)*30,filename1,file_number);
+	
+	//int num_cells = cell_end - cell_start + 1;
+	int i,j,local_density, offset=0;
+	
+	fp=fopen(file_name,"w");
+	if(fp==NULL)
+	{
+		printf("export_CAM_data: Error opening file. Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
+	fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", geometry.n_cells_dim[0], geometry.n_cells_dim[1], geometry.n_cells_dim[2], cell_start, cell_end, step);
+	
+	/* Export to file */
+	//for(i=0; i<num_cells; i++) // i is the cell in the slice of interest
+	for(i=cell_start; i<=cell_end; i++) // i is the cell in the slice of interest
+	{	
+		local_density = (int)data[i][0];
+		fprintf(fp, "%d\t", local_density);
+		if( local_density > 0 )
+		{
+			for(j=1; j<=local_density; j++ ) // j is the particle in cell i
+			{
+				if( is_scalar ==1 )
+				{
+					fprintf(fp,"%lf\t",data[i][j]);
+				}else if(is_scalar == 0)
+				{
+					fprintf(fp,"%lf\t%lf\t%lf\t",data[i][j+offset],data[i][j+offset+1],data[i][j+offset+2]);
+					offset+=2;
+					
+				}else{
+					fprintf(stderr, "export_CAM_data: Option not recognised is_scalar should be 1 or 0. Aborting...\n");
+					exit(EXIT_FAILURE);
+				}
+			}
+			fprintf(fp,"\n");
+		}else{
+			fprintf(fp,"\n");
+	  	}
+	}
+	
+	/* Clean up and release memory*/
+	fclose(fp);	
+		
+	return; /* back to main*/
 }
 
 
 
-/* Calculates the total linear momentum of the system per particle. Returns a 3D vector *
-inline void total_momentum_ppart(int n_part, double m, double ** vel, double * momentum)
-{
-	/* Define variables *
-	int i,j;
-	double factor = 1.0/n_part;
-	
-	/* Initialise output vector *
-	for(j=0; j<3; j++)
-	{
-		momentum[j]=0.0;
-	}
-	
-	/* Add momentums *
-	for( i=0; i<n_part; i++) //loop over particles
-	{
-		for(j=0; j<3; j++) // loop over cartesian components of the velocity
-		{
-			momentum[j]+=m*vel[i][j];
-		}
-	}
-	
-	/* Calculate momentum per particle *
-	for(j=0; j<3; j++)
-	{
-		momentum[j]*=factor;
-	}
-	
-	return; /* Back to main *
-}*/
+
+
 
 /* Calculates the total linear momentum of the system per particle. Returns a 3D vector */
 /*momentum_output contains the 3 components of the total momentum, followed by the three variances */
@@ -275,11 +434,7 @@ inline void total_momentum(int n_part, double m, double ** vel, double * momentu
 	return; /* Back to main */
 }
 
-/* returnd the square norm of a 3D vector v */
-inline double norm_sq(double * v)
-{
-	return v[0]*v[0]+v[1]*v[1]+v[2]*v[2];
-}
+
 
 /* Calculates the total energy per particle, over the whole system, at the time of the call*/
 /* output vector contains the total kinetic energy of the whole system (output[0]), and the 
@@ -325,28 +480,10 @@ inline void total_kinetic_energy(int n_part, double m, double ** vel, double * o
 
 
 
-/* Control routine that checks for compressibility effects: it stopsthe simulation if, at the time of being invoked, the density in any 
-   collision cell is greater than density+X or smaller than density-X with X=DENSITY_TOL*density */
-/* Notice this can be called without undoing the shift after collide */
-/* NOT TESTED */
-inline void check_compressibility(double * cell_mass, int n_cells, double m_inv, double density)
-{
-	int ci;
-	double tolerance = DENSITY_TOL*density;
-	for(ci=0; ci< n_cells; ci++)
-	{
-		//if(m_inv*cell_mass[ci] > DENSITY_TOL*density)
-		if(m_inv*cell_mass[ci] > (density+tolerance) || m_inv*cell_mass[ci] < (density-tolerance) )
-		{
-			fprintf(stderr,"Compressibility effects exceeded tolerance: *shifted* cell %d has instantaneous density of %.2lf\n",ci,cell_mass[ci]*m_inv);
-			exit(EXIT_FAILURE);
-		}
-	}
-	
-	return; /* Back to main*/
-}
 
-		
+////////////////////////////////////////////////////////////////////////////////////////////
+///
+////////////////////////////////////////////////////////////////////////////////////////////		
 /* Maps the particle positions to the cells they ar at, after the grid has been shifted by a vector shift.
    It fills in the vector c_p, cell_mass and cell_occupation (CAM-like) 		*/
 /* MODYDIFY THIS */
@@ -442,73 +579,7 @@ inline void check_temperature(int ** cell_occupation, double ** vel ,double m, i
 
 
 
-/* This function exports the data contained in the array data in a file format suitable for calculating a SAM average with average.c */
-/* The data in data should contain a list of the average value of the property under study in each cell considered, in consecutive order. */
-inline void export_SAM_data(double * data, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
-{
-	FILE * file_fp;
-	char file_name[50];
-	char filename1[50]="";
-	strcpy(filename1,filename);
-	strcat(filename1,"_%d.dat");
-	snprintf(file_name,sizeof(char)*30,filename1,file_number);
-	
-	
-	file_fp=fopen(file_name,"w");
-	int i;		
-	int num_cells = cell_end - cell_start +1;
-	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n",geometry.n_cells_dim[0],geometry.n_cells_dim[1],geometry.n_cells_dim[2], cell_start, cell_end, step);
-	for(i=0; i<num_cells; i++)
-	{
-		fprintf(file_fp,"%lf\t",data[i]);
-	}
 
-	fclose(file_fp);		
-		
-	return; /* back to main*/
-}
-
-/* This function exports the data contained in the array data in a file format suitable for calculating a CAM average with average.c */
-/* The data in data should contain a 2D array with each row containing teh values of interest for the particles in the corresponding collision cell. Cells are stored
-   in consecutive order. The occupation numbers, ie length of the rows, ie the local instantaneous densities are stored in the array of ints local_density.*/
-/* not tested yet*/
-/* Any 2D array ontaining CAM data can be exported to a file calling this function */
-inline void export_CAM_data(double ** data, int * local_density, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
-{
-	FILE * fp;
-	char file_name[50];
-	char filename1[50]="";
-	strcpy(filename1,filename);
-	strcat(filename1,"_%d.dat");
-	snprintf(file_name,sizeof(char)*30,filename1,file_number);
-	
-	int num_cells = cell_end - cell_start + 1;
-	int i,j;
-	
-	fp=fopen(file_name,"w");
-	fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", geometry.n_cells_dim[0], geometry.n_cells_dim[1], geometry.n_cells_dim[2], cell_start, cell_end, step);
-	
-	/* Export to file */
-	for(i=0; i<num_cells; i++) // i is the cell in the slice of interest
-	{	
-		fprintf(fp, "%d\t", local_density[i]);
-		if( local_density[i]>0 )
-		{
-			for(j=1; j<=local_density[i]; j++ ) // j is the particle in cell i
-			{
-				fprintf(fp,"%lf\t",data[i][j]);
-			}
-			fprintf(fp,"\n");
-		}else{
-			fprintf(fp,"\n");
-	  	}
-	}
-	
-	/* Clean up and release memory*/
-	fclose(fp);	
-		
-	return; /* back to main*/
-}
 
 
 
@@ -668,6 +739,8 @@ inline void density_distribution(int n_part, double m, double ** pos, Geometry g
 	
 	return; /* Back to main*/
 }
+
+
 
 
 /*-------------------------------*/
@@ -1040,7 +1113,7 @@ int main(int argc, char **argv) {
 		
 		/* Collision step */
 		
-		//AQUI
+		
 		#if CHECK_MOMENTUM_CONSERVATION
 			encage(pos, shift, n_part, cylinder, c_p, 1 , cell_occupation);
 			calculate_cell_velocity(n_cells, n_part, vel, cell_occupation, cell_vel_beforecollide );
@@ -1124,7 +1197,7 @@ int main(int argc, char **argv) {
 			//total_kinetic_energy(n_part, m, vel, total_energy); 
 			//systemTemp = (2.0*energyPpart - m_inv*norm_sq(momentumPpart) )/3.0;
 			//systemTemp = (2*total_energy[0]-
-				(momentumPpart[0]*momentumPpart[0]+momentumPpart[1]*momentumPpart[1]+momentumPpart[2]*momentumPpart[2])*m_inv)/3.0;
+			//	(momentumPpart[0]*momentumPpart[0]+momentumPpart[1]*momentumPpart[1]+momentumPpart[2]*momentumPpart[2])*m_inv)/3.0;
 			/*fprintf(equilibration_fp,"%d %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf  %8.4lf\n", 
 				i, momentumPpart[0], sqrt(momentumPpart[3]), momentumPpart[1], sqrt(momentumPpart[4]), momentumPpart[2], 
 				sqrt(momentumPpart[5]), total_energy[0], sqrt(total_energy[1]), systemTemp);*/
@@ -1133,9 +1206,9 @@ int main(int argc, char **argv) {
 			//density_distribution(n_part, m, pos, cylinder, null_shift, densities );
 			//export_SAM_data(densities, "./DATA/density", cylinder, 0, cylinder.n_cells-1, i, i);
 			/* Velocity profile */
-			encage(pos, shift, n_part, cylinder, c_p, 1 , cell_occupation);
+			/*encage(pos, shift, n_part, cylinder, c_p, 1 , cell_occupation);
 			calculate_cell_velocity(n_cells, n_part, vel, cell_occupation, cell_vel );
-			export_data(cell_vel,"./DATA/vel_equi",cylinder,0,cylinder.n_cells-1,i,i);
+			export_data(cell_vel,"./DATA/vel_equi",cylinder,0,cylinder.n_cells-1,i,i);*/
 			equilibration_counter=0;
 			}
 			
