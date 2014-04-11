@@ -62,11 +62,3 @@ Lastly but very important, estimate the slip when the fluid velociy is obtained 
 
 
 -----------------------------------------------
-Added comments compatible with doxygen for some functions
-included assert in export_vtk_grid to avoid it crashing when the directory DATA is not present.
-Corrected definition of export_SAM_data to make it more general: now it works with slice arrays and arrays containing informatin of the whole box
-Same modification made in export_CAM_data
-Two additional functions for SAM and CAM to cover cases of scalar and vector properties
-Modified export_CAM_data to take as input an array created by encage instead of separate arrays, one for the local densities and another for the values
-Need to text export SAM and CAM routines
-

@@ -247,35 +247,48 @@ inline void export_data(FILE * fp, double ** data ,int length )//length=n_part o
 }
 
 
+
 //////////////////////////////////////////////////////////////////////////
-///  This function exports the data contained in the array data in a file format suitable for calculating a SAM average with average.c 
-///  Input: data - array of length l, containing the value of a scalar property. l = cell_end-cell_start+1
-///  This function will export the section of the data array specified by cell_start and cell_end.
+/// This function exports the data contained in the array data in a file format suitable for calculating a SAM average with average.c 
+/// Input: 
+/// data - array of length l, containing the value of a scalar property. l = cell_end-cell_start+1
+/// This function will export the section of the data array specified by cell_start and cell_end (both inclusive)
+/// header: array of ints containing the following information: file_number nx ny nz step
+/// Output:
+/// The file has the format: header \n data with:
+/// header= nx \t ny \t nz \t cell_start \t cell_end \t current time step
+/// data= each number corresponds to a cell. There is only one line, numbers are separated by \t 
 //////////////////////////////////////////////////////////////////////////
-inline void export_SAM_data_scalar(double * data, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
+//inline void export_SAM_data_scalar(double * data, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
+inline void export_SAM_data_scalar(double * data, char * filename, int * header, int cell_start, int cell_end)
 {
 	int i;
 	FILE * file_fp;
 	char file_name[50];
 	char filename1[50]="";
+	
+	/* Assemple the file name */
 	strcpy(filename1,filename);
 	strcat(filename1,"_%d.dat");
-	snprintf(file_name,sizeof(char)*30,filename1,file_number);
+	snprintf(file_name,sizeof(char)*30,filename1,header[0]);
 	
-	
+	/* Prepare file pointer */
 	file_fp=fopen(file_name,"w");
 	if( file_fp ==NULL )
 	{
 		printf("export_SAM_data_scalar: Error opening file. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
-	//int num_cells = cell_end - cell_start +1;
-	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n",geometry.n_cells_dim[0],geometry.n_cells_dim[1],geometry.n_cells_dim[2], cell_start, cell_end, step);
+	
+	/* Print header */
+	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n", header[1], header[2], header[3], cell_start, cell_end, header[4]);
 	for(i=cell_start; i<=cell_end; i++)
 	{
 		fprintf(file_fp,"%lf\t",data[i]);
 	}
+	fprintf(file_fp,"\n");
 
+	/* Clean up*/
 	fclose(file_fp);		
 		
 	return; /* back to main*/
@@ -283,34 +296,49 @@ inline void export_SAM_data_scalar(double * data, char * filename, Geometry geom
 
 
 //////////////////////////////////////////////////////////////////////////
-///  This function exports the data contained in the array data in a file format suitable for calculating a SAM average with average.c 
-///  Input: data - array of length l, containing the value of a vector property. l = cell_end-cell_start+1
-///  This function will export the section of the data array specified by cell_start and cell_end.
+/// This function exports the data contained in the array data in a file format suitable for calculating a SAM average with average.c 
+/// Input: 
+/// data - array of length l, containing the value of a vector property. l = cell_end-cell_start+1
+/// This function will export the section of the data array specified by cell_start and cell_end (both inclusive).
+/// header: array of ints containing the following information: file_number nx ny nz step
+/// Output:
+/// The file has the format: header \n data with:
+/// header= nx \t ny \t nz \t cell_start \t cell_end \t current time step
+/// data= each row corresponds to a cell. For each cell (row), the x, y, z coordinates of the vector quantity are separated by tabs:
+/// v0x \t v0y \t v0z \n
+/// v1x \t v1y \t v1z \n
+/// ...
 //////////////////////////////////////////////////////////////////////////
-inline void export_SAM_data_vector(double ** data, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
+inline void export_SAM_data_vector(double ** data, char * filename, int * header, int cell_start, int cell_end)
 {// Shame there's no overloading in C...
 	int i;
 	FILE * file_fp;
+	
+	/* Prepare file name*/
 	char file_name[50];
 	char filename1[50]="";
 	strcpy(filename1,filename);
 	strcat(filename1,"_%d.dat");
-	snprintf(file_name,sizeof(char)*30,filename1,file_number);
+	snprintf(file_name,sizeof(char)*30,filename1,header[0]);
 	
-	
+	/* Open file */
 	file_fp=fopen(file_name,"w");
 	if( file_fp ==NULL )
 	{
 		printf("export_SAM_data_vector: Error opening file. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
-	//int num_cells = cell_end - cell_start +1;
-	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n",geometry.n_cells_dim[0],geometry.n_cells_dim[1],geometry.n_cells_dim[2], cell_start, cell_end, step);
+	
+	/* Print header*/
+	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n",header[1],header[2],header[3], cell_start, cell_end, header[4]);
+	
+	/* Export data */
 	for(i=cell_start; i<=cell_end; i++)
 	{
-		fprintf(file_fp,"%lf\t %lf\t %lf\n",data[i][0],data[i][1],data[i][2]);
+		fprintf(file_fp,"%lf\t%lf\t%lf\n",data[i][0],data[i][1],data[i][2]);
 	}
 
+	/* Clean up*/
 	fclose(file_fp);		
 		
 	return; /* back to main*/
@@ -323,34 +351,38 @@ inline void export_SAM_data_vector(double ** data, char * filename, Geometry geo
 /// ints local_density.
 /// Input: 
 /// data: (cells)x(variable+1) array containing the data to be exported to file. Each row corresponds to a cell. data[ci][0] is the local density in cell ci. alpha is 
-/// the number of particles in each cell (data[ci][0]=alpha). If data is scalar, an example could be: 3 e1 e2 e3, for row ci. If the quantity is a vector, for example teh velocities, 
+/// the number of particles in each cell (data[ci][0]=alpha). If data is scalar, an example could be: 3 e1 e2 e3, for row ci. If the quantity is a vector, for example the velocities, 
 /// the the row for cell ci would look like: 3 v1x v1y v1z v2x v2y v2z v3x v3y v3z.
+/// cell_start: index (within the data) of the first cell that will be exported. 
+/// cell_end: index (within the data) of the last cell that will be exported.
 /// file_number: number to include in the file name
 /// step: timestep at which this data was gathered
 //////////////////////////////////////////////////////////////////////////
-/*NOT TESTED*/
-inline void export_CAM_data(int is_scalar, double ** data, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
+inline void export_CAM_data(int is_scalar, double ** data, char * filename, int * header, int cell_start, int cell_end)
 {
 	FILE * fp;
+	
+	/* Prepare file name*/
 	char file_name[50];
 	char filename1[50]="";
 	strcpy(filename1,filename);
 	strcat(filename1,"_%d.dat");
-	snprintf(file_name,sizeof(char)*30,filename1,file_number);
+	snprintf(file_name,sizeof(char)*30,filename1,header[0]);
 	
-	//int num_cells = cell_end - cell_start + 1;
-	int i,j,local_density, offset=0;
+	int i,j,local_density;
 	
+	/* Open file name */
 	fp=fopen(file_name,"w");
 	if(fp==NULL)
 	{
 		printf("export_CAM_data: Error opening file. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
-	fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", geometry.n_cells_dim[0], geometry.n_cells_dim[1], geometry.n_cells_dim[2], cell_start, cell_end, step);
+	
+	/* Print header */
+	fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", header[1], header[2], header[3], cell_start, cell_end, header[4]);
 	
 	/* Export to file */
-	//for(i=0; i<num_cells; i++) // i is the cell in the slice of interest
 	for(i=cell_start; i<=cell_end; i++) // i is the cell in the slice of interest
 	{	
 		local_density = (int)data[i][0];
@@ -364,8 +396,7 @@ inline void export_CAM_data(int is_scalar, double ** data, char * filename, Geom
 					fprintf(fp,"%lf\t",data[i][j]);
 				}else if(is_scalar == 0)
 				{
-					fprintf(fp,"%lf\t%lf\t%lf\t",data[i][j+offset],data[i][j+offset+1],data[i][j+offset+2]);
-					offset+=2;
+					fprintf(fp,"%lf\t%lf\t%lf\t",data[i][3*(j-1)+1],data[i][3*(j-1)+2],data[i][3*(j-1)+3]);
 					
 				}else{
 					fprintf(stderr, "export_CAM_data: Option not recognised is_scalar should be 1 or 0. Aborting...\n");
@@ -386,8 +417,7 @@ inline void export_CAM_data(int is_scalar, double ** data, char * filename, Geom
 
 
 
-
-
+//AQUI
 
 /* Calculates the total linear momentum of the system per particle. Returns a 3D vector */
 /*momentum_output contains the 3 components of the total momentum, followed by the three variances */
