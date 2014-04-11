@@ -417,18 +417,23 @@ inline void export_CAM_data(int is_scalar, double ** data, char * filename, int 
 
 
 
-//AQUI
-
-/* Calculates the total linear momentum of the system per particle. Returns a 3D vector */
-/*momentum_output contains the 3 components of the total momentum, followed by the three variances */
+//////////////////////////////////////////////////////////////////////////
+/// Calculates the total linear momentum of the system (only plasma particles).
+/// Input:
+/// n_part - Total number of particles in teh simulation box
+/// m - Mass of plasma particles
+/// vel - Velocity vector of all the particles (n_part x 3)
+/// Output:
+/// momentum_output - 3D vector with total momentum of the simulation box (sum of the momentum of all particles)
+//////////////////////////////////////////////////////////////////////////
 inline void total_momentum(int n_part, double m, double ** vel, double * momentum_output)
 {
 	/* Define variables */
 	int i,j;
-	double factor = 1.0/(double)n_part;
+	//double factor = 1.0/(double)n_part;
 	
 	/* Initialise output vector */
-	for(j=0; j<6; j++)
+	for(j=0; j<3; j++)
 	{
 		momentum_output[j]=0.0;
 	}
@@ -443,12 +448,12 @@ inline void total_momentum(int n_part, double m, double ** vel, double * momentu
 	}
 	
 	/* Calculate momentum per particle */
-	for(j=0; j<3; j++)
+	/*for(j=0; j<3; j++)
 	{
 		momentum_output[j]*=factor; //momentum per particle
-	}
+	}*/
 	
-	for(i=0; i<n_part; i++)
+	/*for(i=0; i<n_part; i++)
 	{
 		for(j=3; j<6; j++)
 		{
@@ -459,7 +464,7 @@ inline void total_momentum(int n_part, double m, double ** vel, double * momentu
 	for(j=3; j<6; j++)
 	{
 		momentum_output[j]*=factor; //momentum per particle
-	}
+	}*/
 	
 	return; /* Back to main */
 }
