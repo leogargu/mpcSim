@@ -417,112 +417,24 @@ inline void export_CAM_data(int is_scalar, double ** data, char * filename, int 
 
 
 
-//////////////////////////////////////////////////////////////////////////
-/// Calculates the total linear momentum of the system (only plasma particles).
-/// Input:
-/// n_part - Total number of particles in teh simulation box
-/// m - Mass of plasma particles
-/// vel - Velocity vector of all the particles (n_part x 3)
-/// Output:
-/// momentum_output - 3D vector with total momentum of the simulation box (sum of the momentum of all particles)
-//////////////////////////////////////////////////////////////////////////
-inline void total_momentum(int n_part, double m, double ** vel, double * momentum_output)
-{
-	/* Define variables */
-	int i,j;
-	//double factor = 1.0/(double)n_part;
-	
-	/* Initialise output vector */
-	for(j=0; j<3; j++)
-	{
-		momentum_output[j]=0.0;
-	}
-	
-	/* Add momentums */
-	for( i=0; i<n_part; i++) //loop over particles
-	{
-		for(j=0; j<3; j++) // loop over cartesian components of the velocity
-		{
-			momentum_output[j]+=m*vel[i][j];
-		}
-	}
-	
-	/* Calculate momentum per particle */
-	/*for(j=0; j<3; j++)
-	{
-		momentum_output[j]*=factor; //momentum per particle
-	}*/
-	
-	/*for(i=0; i<n_part; i++)
-	{
-		for(j=3; j<6; j++)
-		{
-			momentum_output[j] += (m*vel[i][j-3] - momentum_output[j-3])*(m*vel[i][j-3] - momentum_output[j-3]);
-		}
-	}
-	
-	for(j=3; j<6; j++)
-	{
-		momentum_output[j]*=factor; //momentum per particle
-	}*/
-	
-	return; /* Back to main */
-}
-
-
-
-/* Calculates the total energy per particle, over the whole system, at the time of the call*/
-/* output vector contains the total kinetic energy of the whole system (output[0]), and the 
-variance (output[1])	*/
-inline void total_kinetic_energy(int n_part, double m, double ** vel, double * output)
-{
-	double energy = 0.0;
-	int i;
-	double sigma = 0.0;
-	
-	for(i=0; i<n_part; i++)
-	{
-		//energy += m * ( vel[i][0]*vel[i][0] + vel[i][1]*vel[i][1] + vel[i][2]*vel[i][2] );
-		energy += m * norm_sq(vel[i]);
-	}
-	energy = 0.5*energy/(double)n_part;
-	
-	for(i=0; i<n_part; i++)
-	{
-		sigma += (0.5*m*norm_sq(vel[i])-energy)*(0.5*m*norm_sq(vel[i])-energy);
-	}
-	
-	/*debugging*/
-	/*double aux=0.0;
-	for(i=0; i<n_part; i++)
-	{
-		aux += (0.5*m*norm_sq(vel[i]))*(0.5*m*norm_sq(vel[i]));
-	}
-	
-	aux=aux/(double)(n_part);*/
-	
-	
-	
-	sigma = sigma /(double)n_part;
-	
-	/*assert( is_approx_zero((aux-energy*energy)-sigma,1e-5) );*/
-	
-	output[0] = energy; //energy per particle
-	output[1] = sigma; //variance (sigma^2)
-	
-	return;
-}
-
-
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////
-///
+/// Maps the particle positions to the cells they are at, after the grid has been shifted by a vector shift
+/// Input:
+/// pos - Position vector containing the position vectors of all teh (plasma) particles in teh simulation box
+/// shift - 3D shift vector. 
+/// n_part - Total number of (plasma) particles in the simulation box
+/// cylinder - Geometry object (struct)
+/// calculate_cell_occupation -  Boolean to switch between calculating the cell_occupation array (1) or not (0)
+/// Output:
+/// c_p - Vector of length n_part containing, for each particle (row), the global index of the cell the particle is at
+/// cell_occupation - 2D array in which each row represents a cell. Within each row, the first element is the local denisty. Teh following numbers are the indices of
+/// the particles at that cell. For example:
+/// 4 \t 120 \t 146 \t 135 \t 27
+/// 2 \t 189 \t 100
+/// 0
+/// 3 \t 110 \t 199 \t 55
+/// ....
 ////////////////////////////////////////////////////////////////////////////////////////////		
-/* Maps the particle positions to the cells they ar at, after the grid has been shifted by a vector shift.
-   It fills in the vector c_p, cell_mass and cell_occupation (CAM-like) 		*/
-/* MODYDIFY THIS */
-//inline void encage(double ** pos, double * shift, int n_part, Geometry cylinder, int * c_p, double * cell_mass, double m, int calculate_cell_occupation , int ** cell_occupation)
 inline void encage(double ** pos, double * shift, int n_part, Geometry cylinder, int * c_p, int calculate_cell_occupation , int ** cell_occupation)
 {
 	int i;
@@ -553,69 +465,146 @@ inline void encage(double ** pos, double * shift, int n_part, Geometry cylinder,
 }
 
 
-
-
-/* cell_temp is output array of the local (collision cell) temperature */
-/* To do SAM average, call with factor 1.0 */
-/* This function calculates teh temperature in each cell over the whole simulation box */
-/* Use for SAM averaging */
-/* cell_temp is the output array. cell_occupation is input. Call encage first to generate it. */
-inline void check_temperature(int ** cell_occupation, double ** vel ,double m, int n_cells, double * cell_temp)
+//////////////////////////////////////////////////////////////////////////
+/// Calculates the total linear momentum of the system (only plasma particles).
+/// Input:
+/// n_part - Total number of particles in the simulation box
+/// m - Mass of plasma particles
+/// vel - Velocity vector of all the particles (n_part x 3)
+/// Output:
+/// momentum_output - 3D vector with total momentum of the simulation box (sum of the momentum of all particles)
+//////////////////////////////////////////////////////////////////////////
+inline void total_momentum(int n_part, double m, double ** vel, double * momentum_output)
 {
-	int ci,j,k;
-	double cell_vel[3];
+	/* Define variables */
+	int i,j;
 	
-	for(ci=0; ci<n_cells; ci++)
+	/* Initialise output vector */
+	for(j=0; j<3; j++)
 	{
-		cell_temp[ci] = 0.0;
+		momentum_output[j]=0.0;
 	}
 	
-	for(ci=0; ci<n_cells; ci++)
+	/* Add momentums */
+	for( i=0; i<n_part; i++) //loop over particles
 	{
-		if( cell_occupation[ci][0] == 0)
+		for(j=0; j<3; j++) // loop over cartesian components of the velocity
 		{
-			cell_temp[ci] = 0.0;  //-1.0  right choice?
-			continue;
+			momentum_output[j]+=m*vel[i][j];
 		}
-		cell_vel[0] = 0.0;
-		cell_vel[1] = 0.0;
-		cell_vel[2] = 0.0;
-		
-		for(j=1; j<=cell_occupation[ci][0]; j++)
-		{
-			for(k=0; k<3; k++)
-			{
-				cell_vel[k] += vel[ cell_occupation[ci][j] ][k];
-			}
-		}
-
-		for(k=0; k<3; k++)
-		{
-			cell_vel[k]/=(double)cell_occupation[ci][0];
-		}
-		
-		for(j=1; j<=cell_occupation[ci][0]; j++)
-		{
-			for(k=0; k<3; k++)
-			{
-				cell_temp[ci] += ((vel[ cell_occupation[ci][j] ][k]-cell_vel[k]) * (vel[ cell_occupation[ci][j] ][k]-cell_vel[k]));
-				//cell_temp[ci] += ((vel[ cell_occupation[ci][j] ][k] ) * (vel[ cell_occupation[ci][j] ][k]));
-
-			}
-		}
-		cell_temp[ci]*= (m/((double)3*cell_occupation[ci][0]));
 	}
 	
-	//cell_temp[ci] contains the cvalue of k_BT_cell for each cell ci
 	
-	
-	return; /* return to main */
+	return; /* Back to main */
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+/// Calculates the total linear momentum of the cell (only plasma particles).
+/// Input:
+/// m - Mass of plasma particles
+/// vel - Velocity vector of all the particles (n_part x 3)
+/// cell_particles - 1D array containing the indices of the particles currently at this cell, preceded by the local particle density (length of cell_particles)
+/// For example: cell_particles = {4, 102, 150, 164, 98}. This can be cell_occupation[ci], with cell_occupation being the array generated by encage()
+/// Output:
+/// momentum_output - 3D vector with total momentum of the cell (sum of the momentum of the particles present in the cell)
+//////////////////////////////////////////////////////////////////////////
+inline void cell_momentum(int * cell_particles , double m, double ** vel, double * momentum_output)
+{
+	/* Define variables */
+	int i,j;
+	
+	/* Initialise output vector */
+	for(j=0; j<3; j++)
+	{
+		momentum_output[j]=0.0;
+	}
+	
+	/* Add momentums */
+	for( i=1; i<=cell_particles[0]; i++) //loop over particles
+	{
+		for(j=0; j<3; j++) // loop over cartesian components of the velocity
+		{			
+			momentum_output[j] += m*vel[ cell_particles[i] ][j];
+		}
+	}
+	
+	return; /* Back to main */
+}
 
 
+//////////////////////////////////////////////////////////////////////////
+/// Calculates the total kinetic energy of the simulation box (plasma particles only)
+/// Input:
+/// n_part - Total number of (plasma) particles in the simulation box
+/// m - Mass of the particles
+/// vel - Velocity array for the system
+///Output:
+/// Total kinetic energy of the system of n_part particles
+//////////////////////////////////////////////////////////////////////////
+inline double total_kinetic_energy(int n_part, double m, double ** vel)
+{
+	double energy = 0.0;
+	int i;
+	
+	for(i=0; i<n_part; i++)
+	{
+		energy += m * norm_sq(vel[i]);
+	}
 
+	
+	return 0.5*energy;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+/// Calculates the total kinetic energy of a given cell (plasma particles only)
+/// Input:
+/// m - Mass of the particles
+/// vel - Velocity array for the system
+/// cell_particles - 1D array containing the indices of the particles currently at this cell, preceded by the local particle density (length of cell_particles)
+/// For example: cell_particles = {4, 102, 150, 164, 98}. This can be cell_occupation[ci], with cell_occupation being the array generated by encage()
+///Output:
+/// Total kinetic energy of the system of n_part particles
+//////////////////////////////////////////////////////////////////////////
+inline double cell_kinetic_energy(int * cell_particles, double m, double ** vel)
+{
+	double energy = 0.0;
+	int i;
+	
+	for(i=1; i<=cell_particles[0]; i++)
+	{
+		energy += m * norm_sq(vel[i]);
+	}
+
+	
+	return 0.5*energy;
+}
+
+
+// DO NOT DELETE!
+/*  This function assumes the cell_volume array in the struct Geometry has been defined.
+It is also necessary to implement a function to calculate these volumes (algorithm already done)
+//////////////////////////////////////////////////////////////////////////
+/// Calculates the instantaneous density distribution in the simulation box
+/// Input:
+/// cell_occupation - 2D array generated by encage() 
+/// n_cells - Total number of collision cells in teh simulation box
+/// Output:
+/// densities - 1D array containing the 
+//////////////////////////////////////////////////////////////////////////
+inline void density_distribution(int ** cell_occupation, double m, Geometry cylinder, int * densities)
+{
+	int i;
+	
+	for(i=0; i<cylinder.n_cells; i++)
+	{
+		densities[i] = m*cell_occupation[i][0]/cylinder.cell_volume[i];
+	}
+	
+	return;/* Back to main*
+}
+*/
 
 
 
@@ -702,6 +691,70 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 
 
 
+//AQUI
+
+
+/* cell_temp is output array of the local (collision cell) temperature */
+/* To do SAM average, call with factor 1.0 */
+/* This function calculates teh temperature in each cell over the whole simulation box */
+/* Use for SAM averaging */
+/* cell_temp is the output array. cell_occupation is input. Call encage first to generate it. */
+inline void check_temperature(int ** cell_occupation, double ** vel ,double m, int n_cells, double * cell_temp)
+{
+	int ci,j,k;
+	double cell_vel[3];
+	
+	for(ci=0; ci<n_cells; ci++)
+	{
+		cell_temp[ci] = 0.0;
+	}
+	
+	for(ci=0; ci<n_cells; ci++)
+	{
+		if( cell_occupation[ci][0] == 0)
+		{
+			cell_temp[ci] = 0.0;  //-1.0  right choice?
+			continue;
+		}
+		cell_vel[0] = 0.0;
+		cell_vel[1] = 0.0;
+		cell_vel[2] = 0.0;
+		
+		for(j=1; j<=cell_occupation[ci][0]; j++)
+		{
+			for(k=0; k<3; k++)
+			{
+				cell_vel[k] += vel[ cell_occupation[ci][j] ][k];
+			}
+		}
+
+		for(k=0; k<3; k++)
+		{
+			cell_vel[k]/=(double)cell_occupation[ci][0];
+		}
+		
+		for(j=1; j<=cell_occupation[ci][0]; j++)
+		{
+			for(k=0; k<3; k++)
+			{
+				cell_temp[ci] += ((vel[ cell_occupation[ci][j] ][k]-cell_vel[k]) * (vel[ cell_occupation[ci][j] ][k]-cell_vel[k]));
+				//cell_temp[ci] += ((vel[ cell_occupation[ci][j] ][k] ) * (vel[ cell_occupation[ci][j] ][k]));
+
+			}
+		}
+		cell_temp[ci]*= (m/((double)3*cell_occupation[ci][0]));
+	}
+	
+	//cell_temp[ci] contains the cvalue of k_BT_cell for each cell ci
+	
+	
+	return; /* return to main */
+}
+
+
+
+
+/* THIS FUNCTION IS NOT NECESSARY
 ////////////////////////////////////////////////////
 /// Calculates the mean velocity of each cell at the time of being called (instantaneous mean velocity).
 /// Input: cell_occupation, 2D array cointaining in row j the total number of particles found in that cell, followed by 
@@ -714,7 +767,7 @@ inline void calculate_cell_velocity(int n_cells, int n_part, double ** vel, int 
 	int local_density;
 	
 	
-	/* Initialization */
+	/* Initialization *
 	for(i=0; i<n_cells; i++)
 	{
 		for(k=0; k<3; k++)
@@ -745,35 +798,9 @@ inline void calculate_cell_velocity(int n_cells, int n_part, double ** vel, int 
 		}
 	}
 	
-	return; /* back to main */
+	return; /* back to main *
 }
-
-
-
-
-/* Calculates the distribution of particles in the whole domain. The output vector densities has length=n_cells,
- and contains the number of particles found in each cell, for the given timestep.		*/
-inline void density_distribution(int n_part, double m, double ** pos, Geometry geometry, double * shift, double * densities )
-{
-	int i;
-	int cell_idx;
-	double factor=1.0/geometry.a;
-	
-	/* Clean array*/
-	for(i=0; i<geometry.n_cells; i++)
-	{
-		densities[i] = 0.0;
-	}
-
-	for(i=0; i<n_part; i++)
-	{
-		cell_idx = pos2cell_idx(geometry, pos[i], shift );// canonize is included here, and check of being outside of the cylinder too
-		assert( cell_idx>= 0 && cell_idx <= geometry.n_cells);
-		densities[cell_idx] += factor * m;
-	}
-	
-	return; /* Back to main*/
-}
+*/
 
 
 

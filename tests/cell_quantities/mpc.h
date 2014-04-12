@@ -28,7 +28,6 @@ struct geometry
 	double max_sq;		/// Set to (radius + epsilon)^2
 	int n_cells;		/// Number of cells in the simulation box
 	int n_cells_dim[3];	/// Number of cells in each axis direction (array of 3 elements x,y,z)
-	//double * cell_volume;
 	
 };
 
