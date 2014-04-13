@@ -182,7 +182,7 @@ inline void export_vtk_plasma(int id, double ** pos, double ** vel,double ** acc
 /// This exports the VTK file defining the grid used (not the vessel) 
 /// This is called only once at the start of the simulation. It exports in ASCII.
 //////////////////////////////////////////////////////////////////////////
-inline void export_vtk_gid(Geometry cylinder)
+inline void export_vtk_grid(Geometry cylinder)
 {
 	FILE * fp;
 	fp = fopen("./DATA/collision_grid.vtk","w");
@@ -608,6 +608,46 @@ inline void density_distribution(int ** cell_occupation, double m, Geometry cyli
 
 
 
+//////////////////////////////////////////////////////////////////////////
+/// This function builds the CAM array of velocities for a particular slice (at position float x), at a particular time
+/// Input:
+/// x - x position of the slice that is being considered.
+/// Output:
+/// vector_CAM_output - Output array of size (ny*nz) x (3*max_density), in the CAM format, with the indices of the cells 
+/// being referred to the local slice. There is no header. For example: 2 v1x v1y v1z v2x v2y v2z
+//////////////////////////////////////////////////////////////////////////
+//NOT TESTED
+inline void slice_CAM_velocities(double x, Geometry cylinder, int ** cell_occupation, double ** vel, double ** vector_CAM_output)
+{
+	int i,j,k;
+	int nynz = cylinder.n_cells_dim[1] * cylinder.n_cells_dim[2];//I know this in advance because I am passing the output vector
+	int first_cell = slice_start_index(x, nynz, cylinder.a);
+	int last_cell =  first_cell + nynz - 1;
+	
+	int counter = 0;
+	int particle_idx;
+	for(i=first_cell; i<=last_cell; i++)
+	{
+		vector_CAM_output[counter][0]=cell_occupation[i][0];
+		
+		for(j=1; j<=cell_occupation[i][0]; j++)
+		{
+			particle_idx=cell_occupation[i][j];
+			
+			for(k=0; k<3; k++)
+			{
+				vector_CAM_output[counter][3*(j-1)+k] = vel[particle_idx][k];
+			}
+			
+		}
+		
+	}
+	
+	
+	return; /* Back to main */
+}
+
+
 
 /* It exports the data to do the averages to calculate the 3Dvelocity profile at a given */
 /* point x, at a particular time step */
@@ -811,7 +851,16 @@ inline void calculate_cell_velocity(int n_cells, int n_part, double ** vel, int 
 
 int main(int argc, char **argv) {
 	
-	int i=0,j=0,k=0; 		 	/* Generic loop counters */
+	int i=0,j=0,k=0; 		 	/* Generic counters */
+	
+	/*------------------------------------------------------------------*/
+	/*	SETUP: Import						    */
+	/* 	Reading variables from input data file.			    */
+	/*								    */
+	/*	 See description of units in Watari2007 		    */
+	/*------------------------------------------------------------------*/	
+	
+	// Include macros in input data?
 	
 	FILE * input_fp;
 	input_fp = fopen(argv[1],"r");
@@ -823,8 +872,6 @@ int main(int argc, char **argv) {
 	double value=0.0;
 	double variable_array[10];
 	while (fscanf(input_fp, "%s\t%lf", variable_name, &value) == 2) {
-		
-		//printf("reading variable %s = %.3lf\n",variable_name, value);
 		variable_array[i] = value;
 		i++;
   	}
@@ -835,48 +882,39 @@ int main(int argc, char **argv) {
 	const int n_part = variable_array[3];   	/// Number of particles in the simulation box//density=10
 	const double T = variable_array[4];  		/// Temperature, in kT units
 	const double m = variable_array[5]; 		/// Mass of a particle (plasma)
-	const double dt = variable_array[6];
+	const double dt = variable_array[6];		/// Timestep
 	const double g = variable_array[7];		/// "Gravity" (acceleration that drags the flow in the x-direction)
-	const int steps = variable_array[8];	/// Number of steps in the simulation
-	int equilibration_time = variable_array[9]; 
+	const int steps = variable_array[8];		/// Number of steps in the simulation
+	int equilibration_time = variable_array[9]; 	/// Number of timesteps to run before the production phase starts
 	
-	
-	int equilibration_export = 10;
 	fclose(input_fp);
+	
+	
 	/*------------------------------------------------------------------*/
-	/*	SETUP							    */
-	/* 	Definition of constants, initialization of variables,       */
-	/*      memory allocation, I/O setup			            */
-	/*								    */
-	/*	 See description of units in Watari2007 		    */
+	/*	SETUP: Complete						    */
+	/* 	Definition of variables derived from the input data file,   */
+	/*      and initialization of other independent variables.  	    */
 	/*------------------------------------------------------------------*/
-	/* Parameters, constants and variables */
-	/*const double a = 1.0;		/// Size of a collision cell (cubic cell)
-	const double Lx = 30.0;		/// Length of the simulation box in the direction of the flow //10
-	const double L = 10.0;		/// Width and height of the simulation box //4
-	const int n_part = 30000;   	/// Number of particles in the simulation box//density=10
-	const double T = 1.0;  		/// Temperature, in kT units
-	const double m = 1.0;*/ 		/// Mass of a particle (plasma)
-	const double m_inv = 1.0/m;	/// Inverse mass of a particle (plasma)
+	const double m_inv = 1.0/m;			/// Inverse mass of a particle (plasma)
 	const double radius = 0.5*( L - a );	   	/// Radius of the cylindrical vessel. It is a/2 smaller than half the box side to allow for grid shifting 
 	const int n_cells = (int)((Lx*L*L)/(a*a*a));  	/// Number of cells in the simulation box	
-	//const double dt = 0.01;		/// Timestep
-	const double density = (1.0*n_part)/(L*L*Lx);  	/// Number of particles per collision cell //const int
-	double null_shift[3] = {0.0, 0.0, 0.0};
+	const double density = (1.0*n_part)/(L*L*Lx);  	/// Average number of particles per collision cell: note bulk cells have a greater density, and boundary cells have a smaller density than this
+	double null_shift[3] = {0.0, 0.0, 0.0};		/// Null 3D vector
+	double shift[3] = {0.0,0.0,0.0};			/// random grid shift vector (Galilean invariance)
 	
 	/* TODO: check Whitmer's implementation of Verlet step and why he does not have a lambda */
 	//const double lambda = 0.65;  /// Verlet's algorithm lambda parameter. 0.65 is a "magic number" for DPD, see page 5 of \cite{verlet}," Novel Methods in Soft Matter Simulations", ed. Karttunen et. al.
 	/* consider setting lambda inside stream()? maybe as a define? */
 	
-	//const double g = 1e-4;	/// "Gravity" (acceleration that drags the flow in the x-direction)
-	double t = 0.0;			/// Time
-	/*const int steps = 10000;	/// Number of steps in the simulation
-	int equilibration_time = 300; */
+	double t = 0.0;					/// Time
+	int equilibration_export = 10;			/// Number of timesteps in between data exports during the equilibration phase
+
 	
 	#if CHECK_EQUILIBRATION
 		equilibration_time = 0;
 	#endif
 	
+	/* Epsilon at the boundary */
 	double verlet_epsilon = (1e-5)*radius; // i.e., tolerance zone thickness 2*epsilon = 2% of the radius.
 	double verlet_min_sq = radius - verlet_epsilon;
 	verlet_min_sq *=verlet_min_sq;
@@ -886,19 +924,10 @@ int main(int argc, char **argv) {
 	/* Struct initialization */
 	const Geometry cylinder={a,Lx,L,0.5*L,0.5*( L - a ), verlet_epsilon, verlet_min_sq, verlet_max_sq, n_cells, { (int)(Lx/a), (int)(L/a), (int)(L/a)} }; 
 	
-	/* Particle quantities lists */
-	double * pos_rmo;
-	double * vel_rmo;
-	double * acc_rmo;
-	double * cell_vel_rmo;
-	double * cell_rnd_vel_rmo;
-	double ** pos;
-	double ** vel;
-	double ** acc;
-	double ** cell_vel;
-	double ** cell_rnd_vel;
-	double * densities;
-		
+	
+	/*------------------------------------------------------------------*/
+	/*	SETUP: Check						    */
+	/*------------------------------------------------------------------*/
 	/* Check parameter values are compatible */
 	if( fmod(Lx,a) != (double)0.0 ){
 		printf(" Lx must be a multiple of a. Exiting...\n");
@@ -929,14 +958,12 @@ int main(int argc, char **argv) {
 	printf("Knudsen number Kn=%.3lf\n",dt * sqrt(T*m_inv)/a); // Kn>>1 is free molecular regime, Kn<<1 is hydrodynamic regime, Kn around 1 is gas rarefaction
 	// export hydrodynamic numbers?
 	printf("--------------------------------\n");
- 
-
-	/* Export collision grid data for visualization, and the vessel geometry data */
-	#if EXPORT_STATES
-		export_vtk_gid(cylinder);
-		export_vessel_geometry(cylinder,steps);
-	#endif
 	
+	
+	
+	/*------------------------------------------------------------------*/
+	/*	RNG INITIALIZATION					    */
+	/*------------------------------------------------------------------*/
 	/* Set up RNG */
 	const gsl_rng_type * rngtype; 	 /* Type of rng generator   */
 	gsl_rng * r;			 /* Instance of a generator */
@@ -954,34 +981,57 @@ int main(int argc, char **argv) {
 	printf("RNG seed \t %ld\n",seed);
 	//#endif
 	gsl_rng_set(r , seed); //sets the seed for the RNG r
-
-	/* Allocate memory for particles and set up initial values */
-	pos_rmo = malloc( 3 * n_part * sizeof(double) );
-	if (pos_rmo==NULL) {printf("Error allocating pos_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
-	vel_rmo = malloc( 3 * n_part * sizeof(double) );
-	if (vel_rmo==NULL) {printf("Error allocating vel_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
-	acc_rmo = malloc( 3 * n_part * sizeof(double) );
-	if (acc_rmo==NULL) {printf("Error allocating acc_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
-
-	cell_vel_rmo = malloc( 3 * n_cells * sizeof(double) );
-	if (cell_vel_rmo==NULL) {printf("Error allocating cell_rnd_vel_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
-	cell_rnd_vel_rmo = malloc( 3 * n_cells * sizeof(double) );
-	if (cell_rnd_vel_rmo==NULL) {printf("Error allocating cell_rnd_vel_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
 	
-	pos = malloc( n_part * sizeof(double*) );
-	if (pos==NULL) {printf("Error allocating pos in mpc.c\n"); exit(EXIT_FAILURE);}
-	vel = malloc( n_part * sizeof(double*) );
-	if (vel==NULL) {printf("Error allocating vel in mpc.c\n"); exit(EXIT_FAILURE);}
-	acc = malloc( n_part * sizeof(double*) );
-	if (acc==NULL) {printf("Error allocating acc in mpc.c\n"); exit(EXIT_FAILURE);}
 	
-	cell_vel = malloc( n_cells * sizeof(double*) );
-	if (cell_vel==NULL) {printf("Error allocating cell_vel in mpc.c\n"); exit(EXIT_FAILURE);}
-	cell_rnd_vel = malloc( n_cells * sizeof(double*) );
-	if (cell_rnd_vel==NULL) {printf("Error allocating cell_rnd_vel in mpc.c\n"); exit(EXIT_FAILURE);}
 	
-	densities = malloc(n_cells * sizeof(double));
+	/*------------------------------------------------------------------*/
+	/*	MEMORY ALLOCATION AND INITIALIZATION OF ARRAYS		    */
+	/*------------------------------------------------------------------*/
+	/* Particle quantities lists */
+	double * pos_rmo;
+	double * vel_rmo;
+	double * acc_rmo;
+	double * cell_vel_rmo;
+	double * cell_rnd_vel_rmo;
+	double * cell_mass;	/// cell_mass[ci] is the total mass of the cell ci 
+	double ** pos;
+	double ** vel;
+	double ** acc;
+	double ** cell_vel;
+	double ** cell_rnd_vel;
+	
+	/* auxiliary lists */
+	//double * densities;  /// array of length n_cells which ... volumes?
+	/*densities = malloc(n_cells * sizeof(double));
 	if (densities==NULL){ printf("Error allocating densities in mpc.c\n"); exit(EXIT_FAILURE); }
+	*/
+	int ** cell_occupation;
+	int * cell_occupation_rmo;
+	int * c_p;				/// c_p[i] is the cell index of particle i 
+	
+	
+	int max_oc = (int)(density * DENSITY_TOL);
+	int slice_size = cylinder.n_cells_dim[1] * cylinder.n_cells_dim[2];
+	
+	cell_occupation_rmo=malloc(max_oc*n_cells*sizeof(int));
+	if (cell_occupation_rmo==NULL) {printf("Error allocating cell_occupation_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
+	cell_occupation = malloc(n_cells*sizeof(int*));
+	if (cell_occupation==NULL) {printf("Error allocating cell_occupation in mpc.c\n"); exit(EXIT_FAILURE);}
+	
+	c_p = malloc( n_part*sizeof(int) );     /// cell idx from particle idx
+	if (c_p==NULL) {printf("Error allocating c_p in mpc.c\n"); exit(EXIT_FAILURE);}
+
+
+	
+	/* Data export lists */
+	double * slice_SAM_scalar; //density or particle occupation (casted to double), kinetic energy, mass, temperature
+	double * slice_SAM_vector_rmo;
+	double ** slice_SAM_vector; // velocity,
+	double * slice_CAM_scalar_rmo;
+	double ** slice_CAM_scalar; //density or particle occupation (casted to double), kinetic energy, mass, temperature
+	double * slice_CAM_vector_rmo;
+	double ** slice_CAM_vector; // velocity	
+	
 	
 	#if CHECK_MOMENTUM_CONSERVATION
 		// auxiliary arrays for checking collide 
@@ -1000,16 +1050,45 @@ int main(int argc, char **argv) {
 		cell_vel_aftercollide = malloc( n_cells * sizeof(double*) );
 		if (cell_vel_aftercollide==NULL) {printf("Error allocating cell_vel_aftercollide in mpc.c\n"); exit(EXIT_FAILURE);}
 	#endif
-	// If not checking the temperature this is not needed: create a dummy pointer for encage() and carry on
-	int ** cell_occupation;
-	int * cell_occupation_rmo;
-	int max_oc = (int)(density * DENSITY_TOL);
-	cell_occupation_rmo=malloc(max_oc*n_cells*sizeof(int));
-	if (cell_occupation_rmo==NULL) {printf("Error allocating cell_occupation_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
-	cell_occupation = malloc(n_cells*sizeof(int*));
-	if (cell_occupation==NULL) {printf("Error allocating cell_occupation in mpc.c\n"); exit(EXIT_FAILURE);}
-	// -------------------------------------------------------
+	
+ 
+	/* Allocate memory for particles and set up initial values */
+	pos_rmo = malloc( 3 * n_part * sizeof(double) );
+	if (pos_rmo==NULL) {printf("Error allocating pos_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
+	vel_rmo = malloc( 3 * n_part * sizeof(double) );
+	if (vel_rmo==NULL) {printf("Error allocating vel_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
+	acc_rmo = malloc( 3 * n_part * sizeof(double) );
+	if (acc_rmo==NULL) {printf("Error allocating acc_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
 
+	cell_vel_rmo = malloc( 3 * n_cells * sizeof(double) );
+	if (cell_vel_rmo==NULL) {printf("Error allocating cell_rnd_vel_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
+	cell_rnd_vel_rmo = malloc( 3 * n_cells * sizeof(double) );
+	if (cell_rnd_vel_rmo==NULL) {printf("Error allocating cell_rnd_vel_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
+	
+	cell_mass = malloc( n_cells*sizeof(double) ); 
+	if (cell_mass==NULL) {printf("Error allocating cell_mass in mpc.c\n"); exit(EXIT_FAILURE);}
+	
+	slice_SAM_vector_rmo = malloc( 3 * slice_size * sizeof(double) ); //any x-slice has nynz cells
+	if (slice_SAM_vector_rmo==NULL) {printf("Error allocating slice_SAM_vector_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
+	slice_CAM_scalar_rmo = malloc( (max_oc + 1) *  slice_size * sizeof(double) );//CAM data includes local densities, hence +1
+	if (slice_CAM_scalar_rmo==NULL) {printf("Error allocating slice_CAM_scalar_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
+	slice_CAM_vector_rmo = malloc( (3 * max_oc + 1) *  slice_size * sizeof(double) );
+	if (slice_CAM_vector_rmo==NULL) {printf("Error allocating slice_CAM_vector_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
+	
+	pos = malloc( n_part * sizeof(double*) );
+	if (pos==NULL) {printf("Error allocating pos in mpc.c\n"); exit(EXIT_FAILURE);}
+	vel = malloc( n_part * sizeof(double*) );
+	if (vel==NULL) {printf("Error allocating vel in mpc.c\n"); exit(EXIT_FAILURE);}
+	acc = malloc( n_part * sizeof(double*) );
+	if (acc==NULL) {printf("Error allocating acc in mpc.c\n"); exit(EXIT_FAILURE);}
+
+	
+	cell_vel = malloc( n_cells * sizeof(double*) );
+	if (cell_vel==NULL) {printf("Error allocating cell_vel in mpc.c\n"); exit(EXIT_FAILURE);}
+	cell_rnd_vel = malloc( n_cells * sizeof(double*) );
+	if (cell_rnd_vel==NULL) {printf("Error allocating cell_rnd_vel in mpc.c\n"); exit(EXIT_FAILURE);}
+	
+	
 	for(i=0; i<n_cells; i++)
 	{
 		cell_vel[i] = &cell_vel_rmo[3*i];
@@ -1022,26 +1101,26 @@ int main(int argc, char **argv) {
 			cell_vel_aftercollide[i]=&cell_vel_aftercollide_rmo[3*i];
 		#endif
 	}
-		
-	int * c_p;				/// c_p[i] is the cell index of particle i 
-	c_p = malloc( n_part*sizeof(int) );     /// cell idx from particle idx
-	if (c_p==NULL) {printf("Error allocating c_p in mpc.c\n"); exit(EXIT_FAILURE);}
-
-    
-	/* cell_mass[ci] is the total mass of the cell ci */
-	double * cell_mass;
-	cell_mass = malloc( n_cells*sizeof(double) ); // mass of particles in cell
-	if (cell_mass==NULL) {printf("Error allocating cell_mass in mpc.c\n"); exit(EXIT_FAILURE);}
-
 	
-	double * shift;			/// random grid shift vector (Galilean invariance)
-	shift = malloc(3*sizeof(double));
-	if(shift == NULL) {printf("Error allocating shift in mpc.c\n"); exit(EXIT_FAILURE);}
+	slice_SAM_vector = malloc(  slice_size * sizeof(double*) );
+	if (slice_SAM_vector==NULL) {printf("Error allocating slice_SAM_vector in mpc.c\n"); exit(EXIT_FAILURE);}
+	slice_CAM_scalar = malloc(  slice_size * sizeof(double*) );
+	if (slice_CAM_scalar==NULL) {printf("Error allocating slice_CAM_scalar in mpc.c\n"); exit(EXIT_FAILURE);}
+	slice_CAM_vector = malloc(  slice_size * sizeof(double*) );
+	if (slice_CAM_vector==NULL) {printf("Error allocating slice_CAM_vector in mpc.c\n"); exit(EXIT_FAILURE);}
 	
-
-	/*----------------------------------------------------*/
+	for(i=0; i<slice_size; i++)
+	{
+		slice_SAM_vector[i] = &slice_SAM_vector_rmo[ 3*i ];
+		slice_CAM_scalar[i] = &slice_CAM_scalar_rmo[ (max_oc+1)*i ];
+		slice_CAM_vector[i] = &slice_CAM_vector_rmo[ (3*max_oc+1)*i ];
+	}
+	
+	slice_SAM_scalar = malloc(  slice_size * sizeof(double) );
+	if (slice_SAM_scalar==NULL) {printf("Error allocating slice_SAM_scalar in mpc.c\n"); exit(EXIT_FAILURE);}
+	
 		
-	/* Initialise */
+	/* Initialize and complete memory allocation */
 	/* Position is uniformly distributed in space within vessel: geometry dependent */
 	/* Velocity is normally distributed (Maxwell-Boltzmann) 			*/
 	/* Note: Components of the velocity are chosen uncorrelated   			*/
@@ -1050,7 +1129,7 @@ int main(int argc, char **argv) {
 		/* Complete memory allocation */
 		pos[i] 	 = &pos_rmo[ 3*i ];
 		
-		/* Initialise */
+		/* Initialize */
 		/* For a cylindrical geometry, random points are chosen uniformly within the circle. */
 		populate( r, cylinder, &(pos[i][0]) );
 		
@@ -1066,7 +1145,7 @@ int main(int argc, char **argv) {
 		}
 		acc[i][0] = g; 
 		
-		/*-----------------------------------------------*/
+		/*---------------------------------------------------------------------------------------------------*/
 		// compute_acc(g,&(acc[i][0])); //This line is included in the previous two lines, so it is redundant.
 		//it would, however, be necessary if there were forces acting on the plasma particles
 		 
@@ -1074,7 +1153,7 @@ int main(int argc, char **argv) {
 		//acc[i][0] = g;// -((double)rand()/(RAND_MAX));
 		//acc[i][1] = 40.0*(1-2*((double)rand()/(RAND_MAX)));
 		//acc[i][2]=  40.0*(1-2*((double)rand()/(RAND_MAX)));
-		/*-----------------------------------------------*/
+		/*---------------------------------------------------------------------------------------------------*/
 		
 	}	
 	
@@ -1091,14 +1170,26 @@ int main(int argc, char **argv) {
 
 	
 	
+	
+	/*------------------------------------------------------------------*/
+	/*	EXPORT pre-simulation data				    */
+	/*------------------------------------------------------------------*/
+
+	/* Export collision grid data for visualization, and the vessel geometry data */
+	#if EXPORT_STATES
+		export_vtk_grid(cylinder);
+		export_vessel_geometry(cylinder,steps);
+		export_vtk_plasma(0, pos, vel,acc, n_part);
+	#endif
+	
+	
 	/*------------------------------------------------------------------*/
 	/*	SIMULATION						    */
 	/*------------------------------------------------------------------*/
+	// Import state?
+	// Equilibration run?
+	// production run?
 	
-	/* Export initial data */
-	#if EXPORT_STATES
-		export_vtk_plasma(0, pos, vel,acc, n_part);
-	#endif
 	
 	/* Export velocity profile setup*/
 	int file_counter = 0;
@@ -1286,6 +1377,7 @@ int main(int argc, char **argv) {
 	
 	/*------------------------------------------------------------------*/
 	/*	EXITING							    */
+	/*	Free memory.						    */
 	/*------------------------------------------------------------------*/
 	/* Clean up */
 	
@@ -1311,7 +1403,14 @@ int main(int argc, char **argv) {
 	free(shift);
 	free(cell_occupation_rmo);
 	free(cell_occupation);
-	free(densities);
+	//free(densities);
+	free(slice_SAM_scalar);
+	free(slice_SAM_vector_rmo);
+	free(slice_SAM_vector);
+	free(slice_CAM_scalar_rmo);
+	free(slice_CAM_scalar);
+	free(slice_CAM_vector_rmo);
+	free(slice_CAM_vector);
 	#if CHECK_MOMENTUM_CONSERVATION
 		free(cell_vel_beforecollide_rmo);
 		free(cell_vel_beforecollide);
