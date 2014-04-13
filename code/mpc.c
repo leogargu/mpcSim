@@ -100,7 +100,6 @@ inline void check_compressibility(double * cell_mass, int n_cells, double m_inv,
 	double tolerance = DENSITY_TOL*density;
 	for(ci=0; ci< n_cells; ci++)
 	{
-		//if(m_inv*cell_mass[ci] > DENSITY_TOL*density)
 		if(m_inv*cell_mass[ci] > (density+tolerance) || m_inv*cell_mass[ci] < (density-tolerance) )
 		{
 			fprintf(stderr,"Compressibility effects exceeded tolerance: *shifted* cell %d has instantaneous density of %.2lf\n",ci,cell_mass[ci]*m_inv);
@@ -909,7 +908,7 @@ int main(int argc, char **argv) {
 	printf("Total viscosity /eta/ \t\t %.2lf\n", density * T * dt * ((density/(density-1+exp(-density)))-0.5)/(a*a*a) + m * (density-1+exp(-density))/(12*a*dt));
 	printf("Knudsen number Kn=%.3lf\n",dt * sqrt(T*m_inv)/a); // Kn>>1 is free molecular regime, Kn<<1 is hydrodynamic regime, Kn around 1 is gas rarefaction
 	// export hydrodynamic numbers?
-	printf("--------------------------------\n");
+	
 	
 	
 	
@@ -960,8 +959,13 @@ int main(int argc, char **argv) {
 	int * c_p;				/// c_p[i] is the cell index of particle i 
 	
 	
-	int max_oc = (int)(density * DENSITY_TOL);
+	int max_oc = density+(int)(density * DENSITY_TOL);
 	int slice_size = cylinder.n_cells_dim[1] * cylinder.n_cells_dim[2];
+	
+	printf("Maximum cell occupancy: %d\n",max_oc);
+	printf("Minimum cell occupancy: %d\n",);
+	density+DENSITY_TOL*density;
+	printf("--------------------------------\n");
 	
 	cell_occupation_rmo=malloc(max_oc*n_cells*sizeof(int));
 	if (cell_occupation_rmo==NULL) {printf("Error allocating cell_occupation_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
@@ -1120,6 +1124,7 @@ int main(int argc, char **argv) {
 	
 	/* Export velocity profile setup*/
 	int file_counter = 0;
+	int counter = 0;
 	
 	/* Choose x-position at which the velocity profile will be exported (see implementation in collide.c)*/
 	double x_slice = 15; // check that it is less than Lx (periodic conditions probably compensate anyway...)
@@ -1129,7 +1134,6 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 	
-	int counter = 0;
 
 	#if GALILEAN_SHIFT == 0
 		shift[0] = 0.0;
@@ -1137,23 +1141,29 @@ int main(int argc, char **argv) {
 		shift[2] = 0.0;
 	#endif
 	
+	/*----------------------------------*/
+	/* STREAM - COLLIDE ALGORITHM 	    */
 	/* Loop for a fixed number of times */
-	for(i=1; i<= steps; i++)
+	/*----------------------------------*/
+	for(i=1; i <= steps; i++)
 	{
 	
 		/* Streaming step */
 		stream( dt, n_part, g, cylinder, pos, vel, acc);
 		 
 		/* debugging */
-		if(TEST_all_particles_in_lumen(n_part, cylinder, pos)!=1)
+		assert( TEST_all_particles_in_lumen(n_part, cylinder, pos) == 1 );
+		/*if(TEST_all_particles_in_lumen(n_part, cylinder, pos)!=1)
 		{
 			fprintf(stderr,"mpc.c: particles escaped the lumen after stream step in timestep %d\n",i);
 			exit(EXIT_FAILURE);
-		}
+		}*/
 
 		/* Update timestep */
 		t += dt; 
-
+		
+		
+		/* Draw a random 3D vector for the Galilean shift, if required */
 		#if GALILEAN_SHIFT
 			shift[0] = a * ( -0.5 + gsl_rng_uniform_pos(r) ) ;
 			shift[1] = a * ( -0.5 + gsl_rng_uniform_pos(r) );
@@ -1161,10 +1171,10 @@ int main(int argc, char **argv) {
 		#endif
 		
 		/* Collision step */
-		collide(n_part, T, m, m_inv, cylinder, r, c_p, cell_mass, cell_vel, cell_rnd_vel, shift, pos, vel); // BEWARE! the velocity of cells after this is not to be trusted, due to the Galilean shift: it is necessary to undo it!
+		collide(n_part, T, m, m_inv, cylinder, r, c_p, cell_mass, cell_vel, cell_rnd_vel, shift, pos, vel); 
+		// BEWARE! the velocity of cells after this is not to be trusted, due to the Galilean shift: it is necessary to undo it!
 		// c_p contains the occupation information, but with the Galilean shift: if we wanted to use it, we would need to undo it.		
 		
-
 		
 		#if CHECK_COMPRESSIBILITY
 			check_compressibility(cell_mass, n_cells, m_inv, density);

@@ -1,6 +1,8 @@
 #ifndef MACROS_H /* header guard */
 #define MACROS_H
 
+/* Uncomment to deactivate all assert statements */
+//#define NDEBUG
 
 #define VERBOSE 1
 #define DEBUGGING 1
@@ -34,7 +36,10 @@ and accelerations of all particles. It also exports auxiliary vtk files: collisi
 
 /* Checks, at every timestep, that the instantaneous density at any collision cell is less than DENSITY_TOLxInitial density */
 #define CHECK_COMPRESSIBILITY 1
-#define DENSITY_TOL 5
+
+/* At setup, there is an avarega density per cell (bulk cells have a higher density than this, boundary cells have a lower density)*/
+/* DENSITY_TOL defines the % of variation allowed from the average density. For example, 50% variation is DENSITY_TOL = 0.5 */
+#define DENSITY_TOL 0.5
 
 /* Exports a file, at regular timesteps, containing the temperature in each collision cell. */
 #define CHECK_TEMPERATURE 0
