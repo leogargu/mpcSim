@@ -91,7 +91,7 @@ inline void populate(gsl_rng * r, Geometry cylinder, double * pos) //could be mo
 /* Notice this can be called without undoing the shift after collide */
 /* NOT TESTED */
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-/// Control routine that checks for compressibility effects: it stopsthe simulation if, at the time of being invoked, the density in any 
+/// Control routine that checks for compressibility effects: it stops the simulation if, at the time of being invoked, the density in any 
 /// collision cell is greater than density+X or smaller than density-X with X=DENSITY_TOL*density.
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 inline void check_compressibility(double * cell_mass, int n_cells, double m_inv, double density)
@@ -259,7 +259,6 @@ inline void export_data(FILE * fp, double ** data ,int length )//length=n_part o
 /// header= nx \t ny \t nz \t cell_start \t cell_end \t current time step
 /// data= each number corresponds to a cell. There is only one line, numbers are separated by \t 
 //////////////////////////////////////////////////////////////////////////
-//inline void export_SAM_data_scalar(double * data, char * filename, Geometry geometry, int cell_start, int cell_end, int file_number, int step)
 inline void export_SAM_data_scalar(double * data, char * filename, int * header, int cell_start, int cell_end)
 {
 	int i;
@@ -794,56 +793,6 @@ inline void check_temperature(int ** cell_occupation, double ** vel ,double m, i
 
 
 
-/* THIS FUNCTION IS NOT NECESSARY
-////////////////////////////////////////////////////
-/// Calculates the mean velocity of each cell at the time of being called (instantaneous mean velocity).
-/// Input: cell_occupation, 2D array cointaining in row j the total number of particles found in that cell, followed by 
-///        the indices of those particles. This array can be produced calling encage()
-/// Output: cell_vel_output, n_cells X 3 array
-////////////////////////////////////////////////////
-inline void calculate_cell_velocity(int n_cells, int n_part, double ** vel, int ** cell_occupation, double ** cell_vel_output )
-{
-	int i,j,k;
-	int local_density;
-	
-	
-	/* Initialization *
-	for(i=0; i<n_cells; i++)
-	{
-		for(k=0; k<3; k++)
-		{
-			cell_vel_output[i][k] = 0.0;
-		}
-	}
-	
-	
-	for(i=0; i<n_cells; i++ )
-	{
-		local_density = cell_occupation[i][0];
-		for(k=1; k<=local_density; k++)
-		{
-			for(j=0; j<3; j++)
-			{
-				cell_vel_output[i][j] += vel[ cell_occupation[i][k] ][ j ];
-			}
-		}
-		for(j=0;j<3;j++)
-		{
-			if( local_density != 0 )
-			{
-				cell_vel_output[i][j] /= (double)local_density;
-			}else{
-				cell_vel_output[i][j]=0;
-			}
-		}
-	}
-	
-	return; /* back to main *
-}
-*/
-
-
-
 
 /*-------------------------------*/
 /*		MAIN		 */
@@ -1033,24 +982,6 @@ int main(int argc, char **argv) {
 	double ** slice_CAM_vector; // velocity	
 	
 	
-	#if CHECK_MOMENTUM_CONSERVATION
-		// auxiliary arrays for checking collide 
-		double ** cell_vel_beforecollide;
-		double * cell_vel_beforecollide_rmo;
-		double ** cell_vel_aftercollide;
-		double * cell_vel_aftercollide_rmo;
-	
-		cell_vel_beforecollide_rmo=malloc( 3 * n_cells * sizeof(double) );
-		if (cell_vel_beforecollide_rmo==NULL) {printf("Error allocating cell_vel_beforecollide_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
-		cell_vel_beforecollide = malloc( n_cells * sizeof(double*) );
-		if (cell_vel_beforecollide==NULL) {printf("Error allocating cell_vel_beforecollide in mpc.c\n"); exit(EXIT_FAILURE);}
-		
-		cell_vel_aftercollide_rmo=malloc( 3 * n_cells*sizeof(double) );
-		if (cell_vel_aftercollide_rmo==NULL) {printf("Error allocating cell_vel_aftercollide_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
-		cell_vel_aftercollide = malloc( n_cells * sizeof(double*) );
-		if (cell_vel_aftercollide==NULL) {printf("Error allocating cell_vel_aftercollide in mpc.c\n"); exit(EXIT_FAILURE);}
-	#endif
-	
  
 	/* Allocate memory for particles and set up initial values */
 	pos_rmo = malloc( 3 * n_part * sizeof(double) );
@@ -1095,11 +1026,6 @@ int main(int argc, char **argv) {
 		cell_rnd_vel[i] = &cell_rnd_vel_rmo[3*i];
 		/* Initialization is done at the beginning of collide() */
 		cell_occupation[i] = &cell_occupation_rmo[max_oc*i];
-		
-		#if CHECK_MOMENTUM_CONSERVATION
-			cell_vel_beforecollide[i]=&cell_vel_beforecollide_rmo[3*i];
-			cell_vel_aftercollide[i]=&cell_vel_aftercollide_rmo[3*i];
-		#endif
 	}
 	
 	slice_SAM_vector = malloc(  slice_size * sizeof(double*) );
@@ -1265,35 +1191,10 @@ int main(int argc, char **argv) {
 		#endif
 		
 		/* Collision step */
-		
-		
-		#if CHECK_MOMENTUM_CONSERVATION
-			encage(pos, shift, n_part, cylinder, c_p, 1 , cell_occupation);
-			calculate_cell_velocity(n_cells, n_part, vel, cell_occupation, cell_vel_beforecollide );
-		#endif	
 		collide(n_part, T, m, m_inv, cylinder, r, c_p, cell_mass, cell_vel, cell_rnd_vel, shift, pos, vel); // BEWARE! the velocity of cells after this is not to be trusted, due to the Galilean shift: it is necessary to undo it!
 		// c_p contains the occupation information, but with the Galilean shift: if we wanted to use it, we would need to undo it.		
 		
-		#if CHECK_MOMENTUM_CONSERVATION
-			calculate_cell_velocity(n_cells, n_part, vel, cell_occupation, cell_vel_aftercollide );
 
-			for(j=0;j<n_cells;j++)
-			{
-				for(k=0;k<3;k++)
-				{
-					assert( is_approx_zero(cell_vel_aftercollide[j][k] - cell_vel_beforecollide[j][k],1e-6 ) );
-					/*if( is_approx_zero(cell_vel_aftercollide[j][k] - cell_vel_beforecollide[j][k],1e-5 )  )
-					{ //do nothing 
-					}else{
-						printf("Not zero: %lf\n Aborting...\n",cell_vel_aftercollide[j][k] - cell_vel_beforecollide[j][k]);
-						exit(EXIT_FAILURE);
-					}*/
-				}
-			}
-		#endif
-		
-		
-		
 		#if DEBUGGING_STREAMCOLLIDE
 			export_data(debug_fp, pos , n_part );
 			export_data(debug_fp, vel , n_part );
@@ -1411,13 +1312,7 @@ int main(int argc, char **argv) {
 	free(slice_CAM_scalar);
 	free(slice_CAM_vector_rmo);
 	free(slice_CAM_vector);
-	#if CHECK_MOMENTUM_CONSERVATION
-		free(cell_vel_beforecollide_rmo);
-		free(cell_vel_beforecollide);
-		free(cell_vel_aftercollide_rmo);
-		free(cell_vel_aftercollide);
-	#endif
-
+	
 	gsl_rng_free(r); /* free memory associated with the rng r */
 
 	return(EXIT_SUCCESS);

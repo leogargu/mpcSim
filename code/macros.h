@@ -53,9 +53,6 @@ at every timestep. Redo calculations using the script.pbs.oXXX file data, which 
 	FILE * debug_fp;
 #endif
 
-/* checks momentum is conserved during collide */
-#define CHECK_MOMENTUM_CONSERVATION 1
-
 
 /* This function checks whether a double is zero. This function is not necessary and its code can be changed
 within the calling functions*/
