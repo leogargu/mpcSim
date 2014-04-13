@@ -5,7 +5,6 @@
 #define VERBOSE 1
 #define DEBUGGING 1
 /* Expots positions, velocities, accelerations and rnd velocities of all particles, to debig the stream-collide alternating algorithm*/
-#define DEBUGGING_STREAMCOLLIDE 0
 #define BINARY_EXPORT 0
 #define DEBUGGING_QUARTIC_SOLVER 0   // put this in quartic_solver.h, or change back to DEBUGGING
 
@@ -47,11 +46,6 @@ at every timestep. Redo calculations using the script.pbs.oXXX file data, which 
 /* Turns the shift of the grid prior to each collision step on/off*/
 #define GALILEAN_SHIFT 1
 
-#if DEBUGGING_STREAMCOLLIDE
-	/* Global file pointer */
-	#include <stdio.h>
-	FILE * debug_fp;
-#endif
 
 
 /* This function checks whether a double is zero. This function is not necessary and its code can be changed

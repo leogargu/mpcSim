@@ -625,38 +625,42 @@ inline void slice_CAM_velocities(double x, Geometry cylinder, int ** cell_occupa
 	
 	int counter = 0;
 	int particle_idx;
+	int local_density=0;
+	
 	for(i=first_cell; i<=last_cell; i++)
 	{
-		vector_CAM_output[counter][0]=cell_occupation[i][0];
+		local_density =  cell_occupation[i][0];
+		vector_CAM_output[counter][0] = local_density;
 		
-		for(j=1; j<=cell_occupation[i][0]; j++)
+		for(j=1; j<=local_density; j++)
 		{
-			particle_idx=cell_occupation[i][j];
+			particle_idx = cell_occupation[i][j];
 			
 			for(k=0; k<3; k++)
 			{
 				vector_CAM_output[counter][3*(j-1)+k] = vel[particle_idx][k];
 			}
-			
 		}
 		
+		counter++;
+		
 	}
-	
+	assert( counter == nynz );
 	
 	return; /* Back to main */
 }
 
 
-
-/* It exports the data to do the averages to calculate the 3Dvelocity profile at a given */
+/*
+/* It exports the data to do the averages to calculate the 3Dvelocity profile at a given *
 /* point x, at a particular time step */
-/* The first row in the exported file contains, in this order: the x value at which the slice is taken, */
-/* the number of cells in the slice (ny*nz), and the number of cells in each column in that slice (nz)  */
+/* The first row in the exported file contains, in this order: the x value at which the slice is taken, *
+/* the number of cells in the slice (ny*nz), and the number of cells in each column in that slice (nz)  *
 /* IDEA TO INCREASE PERFORMANCE: DO NOT ALLOCATE AND DEALOCATE MEMORY IN EVERY CALL, EITHER USE STATIC OR pass the arrays as arguments, allocate once in main*/
-/* PING - check this after changing export_CAM_data */
+/* PING - check this after changing export_CAM_data *
 inline void export_vel_profile(int n_part, double density, double ** vel, double ** pos, const Geometry cylinder, double x_slice, int file_number ,int step)
 {
-	/* Declare variables */
+	/* Declare variables *
 	char file_name[30]="./DATA/velprofile";
 	int i,j;
 	double ** slice_vel;
@@ -666,8 +670,8 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 	int nynz = cylinder.n_cells_dim[1] * cylinder.n_cells_dim[2];
 	double nullshift[3]={0.0,0.0,0.0};
 	
-	/* Allocate memory and initialize */
-	/* http://c-faq.com/aryptr/dynmuldimary.html */
+	/* Allocate memory and initialize *
+	/* http://c-faq.com/aryptr/dynmuldimary.html *
 	slice_vel = malloc(nynz * sizeof(double *)); //allocate array of pointers to rows
 	if (slice_vel==NULL) {printf("Error allocating slice_vel in mpc.c\n"); exit(EXIT_FAILURE);}	
 	slice_vel[0] = malloc(nynz * max_part_density * sizeof(double)); // allocate the whole memory of the 2D array to store the data, and initialize to 0
@@ -691,17 +695,17 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 		}
 	}
 	
-	/* Find slice of interest  */
+	/* Find slice of interest  *
 	int first_cell = slice_start_index(x_slice, nynz, cylinder.a);
 	
 
 	/* Find out where each particle is, and gather the data */
 	/* This information could be stored in c_p, if supplied to this method. I do not consider it necessary, in any case a separate call would do*/
-	/* For example, in case another property that needs c_p is going to be calculated after the velocity profile */
+	/* For example, in case another property that needs c_p is going to be calculated after the velocity profile *
 	int cell_idx = 0;
 	for(i=0; i<n_part; i++) //loop over particles
 	{
-		/* Which cell is this particle in?*/
+		/* Which cell is this particle in?*
 		cell_idx = pos2cell_idx(cylinder, pos[i], nullshift);
 		if( cell_idx >= first_cell && cell_idx < first_cell+nynz)//if particle i is in a cell in the slice of interest...
 		{
@@ -717,17 +721,17 @@ inline void export_vel_profile(int n_part, double density, double ** vel, double
 	}
 	
 
-	/* now, export the data */
+	/* now, export the data *
 	export_CAM_data(slice_vel, local_density, file_name, cylinder, first_cell, first_cell + nynz - 1, file_number, step);
 	
 	
-	/* Clean up and release memory*/
+	/* Clean up and release memory*
 	free(slice_vel[0]);
 	free(slice_vel);
 	free(local_density);
 
 }
-
+*/
 
 
 //AQUI
@@ -1122,7 +1126,6 @@ int main(int argc, char **argv) {
 	
 	/* Choose x-position at which the velocity profile will be exported (see implementation in collide.c)*/
 	double x_slice = 15; // check that it is less than Lx (periodic conditions probably compensate anyway...)
-	
 	if( x_slice >= Lx || x_slice <=0 )
 	{
 		fprintf(stderr,"Slice of interest is outside cylinder. Exiting...\n");
@@ -1147,11 +1150,6 @@ int main(int argc, char **argv) {
 	
 		
 	
-	
-	#if DEBUGGING_STREAMCOLLIDE
-		//FILE * debug_fp;
-		debug_fp=fopen("debug_data.dat","w");
-	#endif
 	#if CHECK_TEMPERATURE
 		int file_temp_counter = 0;
 	#endif
@@ -1166,11 +1164,7 @@ int main(int argc, char **argv) {
 	/* Loop for a fixed number of times */
 	for(i=1; i<= steps; i++)
 	{
-		#if DEBUGGING_STREAMCOLLIDE
-			export_data(debug_fp, pos , n_part );
-			export_data(debug_fp, vel , n_part );
-			export_data(debug_fp, acc , n_part );	
-		#endif
+	
 		/* Streaming step */
 		stream( dt, n_part, g, cylinder, pos, vel, acc);
 		 
@@ -1195,11 +1189,6 @@ int main(int argc, char **argv) {
 		// c_p contains the occupation information, but with the Galilean shift: if we wanted to use it, we would need to undo it.		
 		
 
-		#if DEBUGGING_STREAMCOLLIDE
-			export_data(debug_fp, pos , n_part );
-			export_data(debug_fp, vel , n_part );
-			export_data(debug_fp, acc , n_part );	
-		#endif
 		
 		#if CHECK_COMPRESSIBILITY
 			check_compressibility(cell_mass, n_cells, m_inv, density);
@@ -1282,9 +1271,7 @@ int main(int argc, char **argv) {
 	/*------------------------------------------------------------------*/
 	/* Clean up */
 	
-	#if DEBUGGING_STREAMCOLLIDE
-		fclose(debug_fp);//global file pointer
-	#endif
+
 	#if CHECK_EQUILIBRATION		
  		fclose(equilibration_fp);
  	#endif
