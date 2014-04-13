@@ -174,10 +174,6 @@ inline double cell_kinetic_energy(int * cell_particles, double m, double ** vel)
 
 
 
-
-
-
-
 /*-------------------------------*/
 /*		MAIN		 */
 /*-------------------------------*/
