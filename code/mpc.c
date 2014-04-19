@@ -949,7 +949,7 @@ int main(int argc, char **argv) {
 	
 	double t = 0.0;					/// Time
 	int equilibration_export = 10;			/// Number of timesteps in between data exports during the equilibration phase
-	int data_header[5] = { 0, cylinder.n_cells_dim[0], cylinder.n_cells_dim[1], cylinder.n_cells_dim[2], -1, 0};
+	int data_header[6] = { 0, cylinder.n_cells_dim[0], cylinder.n_cells_dim[1], cylinder.n_cells_dim[2], -1, 0};
 	//AQUI
 
 	

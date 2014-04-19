@@ -25,7 +25,9 @@ INPUT = input.dat
 
 # Ignore any file named clean and check_mem, if any
 .PHONY: clean
-.PHONY: check_mem
+.PHONY: memory
+.PHONY: doc
+.PHONY: profile
 
 # Rules for building object files
 # Each object if built from a source file of the same name (dependency), using the compiler
@@ -38,6 +40,8 @@ INPUT = input.dat
 # Build the executable by linking the object files.
 $(EXE) : $(OBJECTS) 
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) 
+	@echo "LDFLAGS="$(LDFLAGS) 
+	@echo "CFLAGS="$(CFLAGS)
 
 #-------------------------------------------------------------------------------
 # Purge object files and executable
@@ -45,11 +49,15 @@ clean :
 	rm *.o ./$(EXE)
 
 # Use Valgrind to track down double free or corruption or the like
-check_mem :
+memory :
 	make CFLAGS='-O1 -g'
 	valgrind --leak-check=yes ./$(EXE) $(INPUT)
-	
 
+# Generate documentation with doxygen
+#doc :
+#	make 
 	
-	
+# Profile the code: force no inlining and remove optimization flags
+profile:
+	make CFLAGS='-O0 -Wall -Wextra -Wundef -Wshadow -Wstrict-overflow=5 -fno-inline -pg' LDFLAGS='-pg -lm -lgsl -lgslcblas'
 

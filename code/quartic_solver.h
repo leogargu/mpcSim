@@ -24,7 +24,7 @@ int solve_cubic(double c[4], double s[3])
 	double aux = 1.0 / c[3];
 	
 	static const double inv_3 = 1.0 / 3.0 ;
-	static const  double inv_3_sq = inv_3 * inv_3;
+	static const  double inv_3_sq = 1.0 / 9.0; //inv_3 * inv_3;
 	
 	
 // normalize the equation:x ^ 3 + Ax ^ 2 + Bx  + C = 0
