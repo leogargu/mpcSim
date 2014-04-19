@@ -118,7 +118,7 @@ inline void check_compressibility(double * cell_mass, int n_cells, double m_inv,
 //////////////////////////////////////////////////////////////////////////
 inline void export_vtk_plasma(int id, double ** pos, double ** vel,double ** acc, int n_part)
 {
-	int i;
+	int i, flag;
 	
 	FILE * fp;
 	char pos_name[30];
@@ -168,7 +168,12 @@ inline void export_vtk_plasma(int id, double ** pos, double ** vel,double ** acc
 	
 	#endif
 	
-	fclose(fp);
+	flag = fclose(fp);
+	if( flag !=0 )
+	{
+		fprintf(stderr,"export_vtk_plasma: error closing file\n Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
 	
 	return; /* back to main */
 }
@@ -183,6 +188,7 @@ inline void export_vtk_plasma(int id, double ** pos, double ** vel,double ** acc
 //////////////////////////////////////////////////////////////////////////
 inline void export_vtk_grid(Geometry cylinder)
 {
+	int flag;
 	FILE * fp;
 	fp = fopen("./DATA/collision_grid.vtk","w");
 	if( fp == NULL )
@@ -191,7 +197,12 @@ inline void export_vtk_grid(Geometry cylinder)
 		exit(EXIT_FAILURE);
 	}
 	fprintf(fp,"# vtk DataFile Version 2.0\nGrid representation\nASCII \nDATASET STRUCTURED_POINTS\nDIMENSIONS %d %d %d\nORIGIN 0 0 0\nSPACING %.1lf %.1lf %.1lf",cylinder.n_cells_dim[0]+1,cylinder.n_cells_dim[1]+1,cylinder.n_cells_dim[2]+1,cylinder.a,cylinder.a,cylinder.a);
-	fclose(fp);	
+	flag = fclose(fp);	
+	if( flag !=0 )
+	{
+		fprintf(stderr,"export_vtk_grid: error closing file\n Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -199,6 +210,7 @@ inline void export_vtk_grid(Geometry cylinder)
 //////////////////////////////////////////////////////////////////////////					
 inline void export_vessel_geometry(Geometry cylinder, int num_steps)
 {
+	int flag;
 	FILE * fp;
 	fp = fopen("./DATA/vessel_geometry.py","w");
 	if( fp == NULL )
@@ -213,7 +225,12 @@ inline void export_vessel_geometry(Geometry cylinder, int num_steps)
 	fprintf(fp,"radius=%lf\n",cylinder.radius);
 	fprintf(fp,"L_half=%lf\n",cylinder.L_half);
 	fprintf(fp,"num_frames=%d\n",num_steps);
-	fclose(fp);
+	flag = fclose(fp);
+	if( flag !=0 )
+	{
+		fprintf(stderr,"export_vessel_geometry: error closing file\n Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
 }
 
 /* export is done in ASCII or BINARY depending on the value of the constant
@@ -261,7 +278,7 @@ inline void export_data(FILE * fp, double ** data ,int length )//length=n_part o
 //////////////////////////////////////////////////////////////////////////
 inline void export_SAM_data_scalar(double * data, char * filename, int * header, int cell_start, int cell_end)
 {
-	int i;
+	int i, flag;
 	FILE * file_fp;
 	char file_name[50];
 	char filename1[50]="";
@@ -289,8 +306,13 @@ inline void export_SAM_data_scalar(double * data, char * filename, int * header,
 	fprintf(file_fp,"\n");
 
 	/* Clean up*/
-	fclose(file_fp);
-		
+	flag = fclose(file_fp);
+	if( flag !=0 )
+	{
+		fprintf(stderr,"export_SAM_data_scalar: error closing file\n Aborting...\n");
+		exit(EXIT_FAILURE);
+	}	
+	
 	return; /* back to main*/
 }
 
@@ -312,7 +334,7 @@ inline void export_SAM_data_scalar(double * data, char * filename, int * header,
 //////////////////////////////////////////////////////////////////////////
 inline void export_SAM_data_vector(double ** data, char * filename, int * header, int cell_start, int cell_end)
 {// Shame there's no overloading in C...
-	int i;
+	int i, flag;
 	FILE * file_fp;
 	
 	/* Prepare file name*/
@@ -341,7 +363,12 @@ inline void export_SAM_data_vector(double ** data, char * filename, int * header
 	}
 
 	/* Clean up*/
-	fclose(file_fp);
+	flag = fclose(file_fp);
+	if( flag !=0 )
+	{
+		fprintf(stderr,"export_SAM_data_vector: error closing file\n Aborting...\n");
+		exit(EXIT_FAILURE);
+	}	
 		
 	return; /* back to main*/
 }
@@ -371,7 +398,7 @@ inline void export_CAM_data(int is_scalar, double ** data, char * filename, int 
 	strcat(filename1,"_%d.dat");
 	snprintf(file_name,sizeof(char)*30,filename1,header[0]);
 	
-	int i,j,local_density;
+	int i,j,local_density, flag;
 	
 	/* Open file name */
 	fp=fopen(file_name,"w");
@@ -413,8 +440,12 @@ inline void export_CAM_data(int is_scalar, double ** data, char * filename, int 
 	}
 	
 	/* Clean up and release memory*/
-	fclose(fp);	
-	
+	flag = fclose(fp);	
+	if( flag !=0 )
+	{
+		fprintf(stderr,"export_CAM_data: error closing file\n Aborting...\n");
+		exit(EXIT_FAILURE);
+	}	
 	return; /* back to main*/
 }
 
@@ -847,7 +878,7 @@ inline void check_temperature(int ** cell_occupation, double ** vel ,double m, i
 int main(int argc, char **argv) {
 	
 	int i=0,j=0,k=0; 		 	/* Generic counters */
-	
+	int fclose_flag;			/* Flag to check file close */
 	/*------------------------------------------------------------------*/
 	/*	SETUP: Import						    */
 	/* 	Reading variables from input data file.			    */
@@ -882,7 +913,12 @@ int main(int argc, char **argv) {
 	const int steps = variable_array[8];		/// Number of steps in the simulation
 	int equilibration_time = variable_array[9]; 	/// Number of timesteps to run before the production phase starts
 	
-	fclose(input_fp);
+	fclose_flag = fclose(input_fp);
+	if( fclose_flag !=0 )
+	{
+		fprintf(stderr,"Error closing input file\n Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
 	
 	
 	/*------------------------------------------------------------------*/
