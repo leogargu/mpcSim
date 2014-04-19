@@ -20,9 +20,12 @@ EXE = mpcSim
 # List of objects
 OBJECTS = mpc.o stream.o collide.o
 
-# Ignore any file named clean, if any
-.PHONY: clean
+# Input data file
+INPUT = input.dat
 
+# Ignore any file named clean and check_mem, if any
+.PHONY: clean
+.PHONY: check_mem
 
 # Rules for building object files
 # Each object if built from a source file of the same name (dependency), using the compiler
@@ -36,11 +39,16 @@ OBJECTS = mpc.o stream.o collide.o
 $(EXE) : $(OBJECTS) 
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) 
 
-
+#-------------------------------------------------------------------------------
 # Purge object files and executable
 clean :
 	rm *.o ./$(EXE)
 
+# Use Valgrind to track down double free or corruption or the like
+check_mem :
+	make CFLAGS='-O1 -g'
+	valgrind --leak-check=yes ./$(EXE) $(INPUT)
+	
 
 	
 	

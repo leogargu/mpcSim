@@ -40,6 +40,9 @@ and accelerations of all particles. It also exports auxiliary vtk files: collisi
 /* At setup, there is an avarega density per cell (bulk cells have a higher density than this, boundary cells have a lower density)*/
 /* DENSITY_TOL defines the % of variation allowed from the average density. For example, 50% variation is DENSITY_TOL = 0.5 */
 #define DENSITY_TOL 0.5
+/* This defines the maximum occupancy allowed in any given cell as density*DENSITY_MAX. This is not related to complressibility chekcs. */
+/* Thsi is solely motivated by the definition of the cell_occupation data structure */
+#define DENSITY_MAX 10
 
 /* Exports a file, at regular timesteps, containing the temperature in each collision cell. */
 #define CHECK_TEMPERATURE 0

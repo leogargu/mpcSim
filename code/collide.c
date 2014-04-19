@@ -129,10 +129,7 @@ void collide(const int n_part, const double T, const double m, const double m_in
 		double rnd_vel[3] ={ gsl_ran_gaussian_ziggurat(r, sqrt(T * m_inv) ) ,
 				     gsl_ran_gaussian_ziggurat(r, sqrt(T * m_inv) ) ,
 		gsl_ran_gaussian_ziggurat(r, sqrt(T * m_inv) ) };    /* zero mean: important for matching gaussian distribution with maxwell-bolztmann */
-   	   			
-		#if DEBUGGING_STREAMCOLLIDE
-			fprintf(debug_fp,"%lf \t %lf \t %lf \t",rnd_vel[0],rnd_vel[1],rnd_vel[2]);	
-		#endif	   	     
+   	   				   	     
 		/* Get the index of the cell particle i is at */
 		c_p[i] = pos2cell_idx( geometry, pos[i], shift ); // canonize is included here, and check of being outside of the cylinder too
 		//c_p[i] = ci; /* store the index of the cell that particle i belongs to */
@@ -151,23 +148,7 @@ void collide(const int n_part, const double T, const double m, const double m_in
 			vel[i][j] = rnd_vel[j];
 		}
 	}
-	#if DEBUGGING_STREAMCOLLIDE
-		fprintf(debug_fp,"\n");	
-	#endif	
-		#if DEBUGGING_STREAMCOLLIDE
-			int p;
-			for(p=0;p<n_part;p++)
-			{
-				fprintf(debug_fp,"%d \t",c_p[p]);
-			}
-			fprintf(debug_fp,"\n");
-			for(p=0;p<n_cells;p++)
-			{
-				fprintf(debug_fp,"%d \t",(int)(cell_mass[p]*m_inv));
-			}
-			fprintf(debug_fp,"\n");
-		#endif
-	
+
 	/*-------------------------------------------*/
 	/*	STEP 3: loop over the cells 	     */
 	/*-------------------------------------------*/
