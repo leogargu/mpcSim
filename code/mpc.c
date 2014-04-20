@@ -124,7 +124,7 @@ inline void export_vtk_plasma(int id, double ** pos, double ** vel,double ** acc
 	FILE * fp;
 	char pos_name[30];
 	//snprintf(pos_name,sizeof(char)*30,"plasma%04d.vtk",id); //leading zeroes: not pvpython-friendly
-	snprintf(pos_name,sizeof(char)*30,"./DATA/plasma%d.vtk",id);
+	snprintf(pos_name,sizeof(char)*30,"./../DATA/plasma%d.vtk",id);
 
 	fp=fopen(pos_name,"w");
 	
@@ -191,10 +191,10 @@ inline void export_vtk_grid(Geometry cylinder)
 {
 	int flag;
 	FILE * fp;
-	fp = fopen("./DATA/collision_grid.vtk","w");
+	fp = fopen("./../DATA/collision_grid.vtk","w");
 	if( fp == NULL )
 	{
-		printf("export_vtk_grid: Error opening ./DATA/collision_grid.vtk. Check directory exists. Aborting...\n");
+		printf("export_vtk_grid: Error opening ./../DATA/collision_grid.vtk. Check directory exists. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
 	fprintf(fp,"# vtk DataFile Version 2.0\nGrid representation\nASCII \nDATASET STRUCTURED_POINTS\nDIMENSIONS %d %d %d\nORIGIN 0 0 0\nSPACING %.1lf %.1lf %.1lf",cylinder.n_cells_dim[0]+1,cylinder.n_cells_dim[1]+1,cylinder.n_cells_dim[2]+1,cylinder.a,cylinder.a,cylinder.a);
@@ -213,10 +213,10 @@ inline void export_vessel_geometry(Geometry cylinder, int num_steps)
 {
 	int flag;
 	FILE * fp;
-	fp = fopen("./DATA/vessel_geometry.py","w");
+	fp = fopen("./../DATA/vessel_geometry.py","w");
 	if( fp == NULL )
 	{
-		printf("export_vessel_geometry: Error opening ./DATA/vessel_geometry.vtk. Check directory exists. Aborting...\n");
+		printf("export_vessel_geometry: Error opening ./../DATA/vessel_geometry.vtk. Check directory exists. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
 	fprintf(fp,"# Cylinder data\n");

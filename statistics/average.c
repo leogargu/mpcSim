@@ -270,20 +270,22 @@ int main(int argc, char **argv) {
 	argv[0] is the program name
 	argv[1] is the type of average: CAM or SAM
 	argv[2] is name of files
-	argv[3] is the number of samples 
+	argv[3] is the number of samples-1 
 	argv[4] is a factor (see note above)
 	*/
+	
+	printf("WARNING: average.c only calculates CAM or SAM averages of scalar quantities.");
 	
 	if(argc!=5)
 	{
 		printf("Wrong number of arguments. Call as:\n");
-		printf("./average <av.type> <filename> <n.samples> <factor>\n<av.type>\tSAM or CAM\n<filename>\tdatafile basic name\n<n.samples>\tnumber of datafiles\n<factor>\tcorrection factor\n");
+		printf("./average <av.type> <filename> <n.samples-1> <factor>\n<av.type>\tSAM or CAM\n<filename>\tdatafile basic name\n<n.samples>\tnumber of datafiles\n<factor>\tcorrection factor\n");
 		printf("Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
 	
 	
-	char filename[50]="./DATA/";
+	char filename[50]="./../DATA/";
 	strcat(filename,argv[2]);
 	
 	double number;

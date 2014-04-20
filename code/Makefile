@@ -28,6 +28,7 @@ INPUT = input.dat
 .PHONY: memory
 .PHONY: doc
 .PHONY: profile
+.PHONY: rmbackup
 
 # Rules for building object files
 # Each object if built from a source file of the same name (dependency), using the compiler
@@ -63,3 +64,7 @@ doc :
 profile:
 	make CFLAGS='-O0 -Wall -Wextra -Wundef -Wshadow -Wstrict-overflow=5 -fno-inline -pg' LDFLAGS='-pg -lm -lgsl -lgslcblas'
 
+# Remove system and emacs backup files
+rmbackup:
+	rm *~
+	rm \#*
