@@ -88,13 +88,14 @@ inline void populate(gsl_rng * r, Geometry cylinder, double * pos) //could be mo
 	return; /* back to main */
 }
 
+/* DO NOT DELETE !!*/
 /* Notice this can be called without undoing the shift after collide */
-/* NOT TESTED */
+/* NOT TESTED : THIS ALSO NEEDS TO INCLUDE THE VOLUME INFORMATION, IT NEEDS TO COMPARE DENSITIES, NOT PARTICLE OCCUPATIONS */
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Control routine that checks for compressibility effects: it stops the simulation if, at the time of being invoked, the density in any 
 /// collision cell is greater than density+X or smaller than density-X with X=DENSITY_TOL*density.
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-inline void check_compressibility(double * cell_mass, int n_cells, double m_inv, double density)
+/*inline void check_compressibility(double * cell_mass, int n_cells, double m_inv, double density)
 {
 	int ci;
 	double tolerance = DENSITY_TOL*density;
@@ -107,9 +108,9 @@ inline void check_compressibility(double * cell_mass, int n_cells, double m_inv,
 		}
 	}
 	
-	return; /* Back to main*/
+	return; /* Back to main*
 }
-
+*/
 
 /* TODO: at the moment the export is done in ASCII only, binary option has not been implemented yet*/
 /* possible to do by keeping the lines in ASCII and writing the data (only) in binary to the same file stream*/
@@ -179,7 +180,7 @@ inline void export_vtk_plasma(int id, double ** pos, double ** vel,double ** acc
 }
 
 
-/* 
+
 /* No need to do in in binary, unless the geometry becomes much more complicated (i.e. some triangulated surface)*/
 /* NOTE that if the directory DATA is not present, the program crashes with a Segmentation Fault */
 //////////////////////////////////////////////////////////////////////////
@@ -279,7 +280,7 @@ inline void export_data(FILE * fp, double ** data ,int length )//length=n_part o
 inline void export_SAM_data_scalar(double * data, char * filename, int * header, int cell_start, int cell_end)
 {
 	int i, flag;
-	FILE * file_fp;
+	FILE * fp;
 	char file_name[50];
 	char filename1[50]="";
 	
@@ -289,24 +290,34 @@ inline void export_SAM_data_scalar(double * data, char * filename, int * header,
 	snprintf(file_name,sizeof(char)*30,filename1,header[0]);
 	
 	/* Prepare file pointer */
-	file_fp=fopen(file_name,"w");
-	if( file_fp ==NULL )
+	fp=fopen(file_name,"w");
+	if( fp ==NULL )
 	{
 		printf("export_SAM_data_scalar: Error opening file. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
 	
+	int cell_idx_start, cell_idx_end;
+	if( header[4] == -1 )
+	{
+		cell_idx_start = 0;
+		cell_idx_end = cell_end - cell_start + 1;
+	}else{
+		cell_idx_start = cell_start;
+		cell_idx_end = cell_idx_start + cell_end - cell_start;
+	}
+	
 	/* Print header */
-	//fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n", header[1], header[2], header[3], cell_start, cell_end, header[4]);
-	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \n", header[1], header[2], header[3], header[4], header[5]);
+	fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", header[1], header[2], header[3], cell_idx_start, cell_idx_end ,header[5]);
+
 	for(i=cell_start; i<=cell_end; i++)
 	{
-		fprintf(file_fp,"%lf\t",data[i]);
+		fprintf(fp,"%lf\t",data[i]);
 	}
-	fprintf(file_fp,"\n");
+	fprintf(fp,"\n");
 
 	/* Clean up*/
-	flag = fclose(file_fp);
+	flag = fclose(fp);
 	if( flag !=0 )
 	{
 		fprintf(stderr,"export_SAM_data_scalar: error closing file\n Aborting...\n");
@@ -335,7 +346,7 @@ inline void export_SAM_data_scalar(double * data, char * filename, int * header,
 inline void export_SAM_data_vector(double ** data, char * filename, int * header, int cell_start, int cell_end)
 {// Shame there's no overloading in C...
 	int i, flag;
-	FILE * file_fp;
+	FILE * fp;
 	
 	/* Prepare file name*/
 	char file_name[50];
@@ -345,25 +356,34 @@ inline void export_SAM_data_vector(double ** data, char * filename, int * header
 	snprintf(file_name,sizeof(char)*30,filename1,header[0]);
 	
 	/* Open file */
-	file_fp=fopen(file_name,"w");
-	if( file_fp ==NULL )
+	fp=fopen(file_name,"w");
+	if( fp ==NULL )
 	{
 		printf("export_SAM_data_vector: Error opening file. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
 	
-	/* Print header*/
-	//fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \t %d \n",header[1],header[2],header[3], cell_start, cell_end, header[4]);
-	fprintf(file_fp,"%d \t %d \t %d \t %d \t %d \n", header[1], header[2], header[3], header[4], header[5]);
+	int cell_idx_start, cell_idx_end;
+	if( header[4] == -1 )
+	{
+		cell_idx_start = 0;
+		cell_idx_end = cell_end - cell_start + 1;
+	}else{
+		cell_idx_start = cell_start;
+		cell_idx_end = cell_idx_start + cell_end - cell_start;
+	}
+	
+	/* Print header */
+	fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", header[1], header[2], header[3], cell_idx_start, cell_idx_end ,header[5]);
 
 	/* Export data */
 	for(i=cell_start; i<=cell_end; i++)
 	{
-		fprintf(file_fp,"%lf\t%lf\t%lf\n",data[i][0],data[i][1],data[i][2]);
+		fprintf(fp,"%lf\t%lf\t%lf\n",data[i][0],data[i][1],data[i][2]);
 	}
 
 	/* Clean up*/
-	flag = fclose(file_fp);
+	flag = fclose(fp);
 	if( flag !=0 )
 	{
 		fprintf(stderr,"export_SAM_data_vector: error closing file\n Aborting...\n");
@@ -378,6 +398,8 @@ inline void export_SAM_data_vector(double ** data, char * filename, int * header
 /// The array data is a 2D array with each row containing the scalar/vector values of interest for the particles in the corresponding collision cell. 
 /// Cells are stored in consecutive order. The occupation numbers (local instantaneous densities), ie length of the rows, are stored in the array of 
 /// ints local_density.
+/// The header of the output file will contain the fillowing information:
+/// nx \t ny \t nz \t (global index of the first cell) \t (global index of the last cell) \t step
 /// Input: 
 /// data: (cells)x(variable+1) array containing the data to be exported to file. Each row corresponds to a cell. data[ci][0] is the local density in cell ci. alpha is 
 /// the number of particles in each cell (data[ci][0]=alpha). If data is scalar, an example could be: 3 e1 e2 e3, for row ci. If the quantity is a vector, for example the velocities, 
@@ -385,7 +407,7 @@ inline void export_SAM_data_vector(double ** data, char * filename, int * header
 /// cell_start: index (within the data) of the first cell that will be exported. 
 /// cell_end: index (within the data) of the last cell that will be exported.
 /// header: array of ints containing the following information: file_number nx ny nz first_cell_index step
-/// where the first_cell_index is the global index of the first cell recorded in data (inclusive), or -1 if the data array constains information on the whole simulation box (i.e. all slices)
+/// where the first_cell_index is the global index of the first cell recorded in data (inclusive), or -1 if the data array contains information on the whole simulation box (i.e. all slices)
 //////////////////////////////////////////////////////////////////////////
 inline void export_CAM_data(int is_scalar, double ** data, char * filename, int * header, int cell_start, int cell_end)
 {
@@ -408,9 +430,19 @@ inline void export_CAM_data(int is_scalar, double ** data, char * filename, int 
 		exit(EXIT_FAILURE);
 	}
 	
+	int cell_idx_start, cell_idx_end;
+	if( header[4] == -1 )
+	{
+		cell_idx_start = 0;
+		cell_idx_end = cell_end - cell_start + 1;
+	}else{
+		cell_idx_start = cell_start;
+		cell_idx_end = cell_idx_start + cell_end - cell_start;
+	}
+	
 	/* Print header */
 	//fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", header[1], header[2], header[3], cell_start, cell_end, header[4]);
-	fprintf(fp,"%d \t %d \t %d \t %d \t %d \n", header[1], header[2], header[3], header[4], header[5]);
+	fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", header[1], header[2], header[3], cell_idx_start, cell_idx_end ,header[5]);
 
 	/* Export to file */
 	for(i=cell_start; i<=cell_end; i++) // i is the cell in the slice of interest
@@ -657,16 +689,20 @@ inline void density_distribution(int ** cell_occupation, double m, Geometry cyli
 /// cylinder - Geometry struct containing the boundary data
 /// cell_occupation - 2D array generated by encage()
 /// vel - 2D array containing the velocity vectors of all the particles in the system
+/// only_x - Export only the x-component of the velocities if set to 1, export the three components if 0. 
+/// IMPORTANT: This option affects the output vector to be called. If set to 1, pass slice_CAM_scalar, if set to 0 pass slice_CAM_vector
 /// Output:
-/// vector_CAM_output - Output array of size (ny*nz) x (3*max_density), in the CAM format, with the indices of the cells 
-/// being referred to the local slice. There is no header. For example: 2 v1x v1y v1z v2x v2y v2z
+/// slice_CAM_output - Output array of size (ny*nz) x (3*max_density) if only_x=0, or (ny*nz)x(max_density), in the CAM format, 
+/// with the indices of the cells being referred to the local slice. There is no header. For example: 2 v1x v1y v1z v2x v2y v2z
 //////////////////////////////////////////////////////////////////////////
-inline void slice_CAM_velocities(double x, Geometry cylinder, int ** cell_occupation, double ** vel, double ** slice_CAM_vector_output)
+inline void slice_CAM_velocities(double x, Geometry cylinder, int ** cell_occupation, double ** vel, int only_x, double ** slice_CAM_output)
 {
 	int i,j,k;
 	int nynz = cylinder.n_cells_dim[1] * cylinder.n_cells_dim[2];//I know this in advance because I am passing the output vector
 	int first_cell = slice_start_index(x, nynz, cylinder.a);
 	int last_cell =  first_cell + nynz - 1;
+	
+	assert( only_x == 0 || only_x == 1 );
 	
 	int counter = 0;
 	int particle_idx;
@@ -675,15 +711,20 @@ inline void slice_CAM_velocities(double x, Geometry cylinder, int ** cell_occupa
 	for(i=first_cell; i<=last_cell; i++)
 	{
 		local_density =  cell_occupation[i][0];
-		slice_CAM_vector_output[counter][0] = 1.0*local_density;
+		slice_CAM_output[counter][0] = 1.0*local_density;
 		
 		for(j=1; j<=local_density; j++)
 		{
 			particle_idx = cell_occupation[i][j];
 			
-			for(k=0; k<3; k++)
+			if( only_x == 0 )
 			{
-				slice_CAM_vector_output[counter][3*j-2+k] = vel[particle_idx][k];//3*(j-1)+k+1
+				for(k=0; k<3; k++)
+				{
+					slice_CAM_output[counter][3*j-2+k] = vel[ particle_idx ][k];//3*(j-1)+k+1
+				}
+			}else{
+				slice_CAM_output[counter][j] = vel[ particle_idx ][0];
 			}
 		}
 		
@@ -1204,7 +1245,7 @@ int main(int argc, char **argv) {
 	int counter = 0;
 	
 	/* Choose x-position at which the velocity profile will be exported (see implementation in collide.c)*/
-	double x_slice = 1.5; // check that it is less than Lx (periodic conditions probably compensate anyway...)
+	double x_slice = 15.5; // check that it is less than Lx (periodic conditions probably compensate anyway...)
 	if( x_slice >= Lx || x_slice <=0 )
 	{
 		fprintf(stderr,"Slice of interest is outside cylinder. Exiting...\n");
@@ -1218,52 +1259,7 @@ int main(int argc, char **argv) {
 		shift[2] = 0.0;
 	#endif
 	
-	
-	printf("Galilean shift OK\n");
-
-	encage(pos, null_shift, n_part, cylinder, c_p, 1 , cell_occupation, max_oc);
-	
-	for(i=0; i<n_cells; i++)
-	{
-		printf("%d",cell_occupation[i][0]);
-		for(j=1;j<=max_oc; j++)
-		{
-			printf("\t%d",cell_occupation[i][j]);
-		}
-		printf("\n");
-	}
-
-	
-	
-	
-	printf("Encage OK\n");
-	slice_CAM_velocities(x_slice, cylinder, cell_occupation, vel, slice_CAM_vector);
-	
-
-	printf("slice_CAM_velocities OK\n");
-	
-	
-	//data_header[4] = slice_start_index(x_slice, cylinder.n_cells_dim[1]*cylinder.n_cells_dim[3], cylinder.a);
-
-	update_data_header(cylinder, 0, x_slice , 0, data_header);
-
-
 		
-	export_CAM_data(0, slice_CAM_vector, "./velocity_sliced", data_header, 0, slice_size-1);
-	printf("export_CAM_data OK\n");
-
-	//data_header[4] = -1;
-	update_data_header(cylinder, 0, -1 , 0, data_header);
-
-	export_SAM_data_vector(vel, "./velocity_full", data_header, 0, n_part-1);
-	printf("export_SAM_data_vector OK\n");
-
-
-	// Check memory problem. Look for check_densities?
-	// Continue with volumes and density distribution
-	
-#if 0
-	
 
 	/*----------------------------------*/
 	/* STREAM - COLLIDE ALGORITHM 	    */
@@ -1272,16 +1268,15 @@ int main(int argc, char **argv) {
 	for(i=1; i <= steps; i++)
 	{
 	
+		/*--------------------*/
+		/*  MPC-AT algorithm  */
+		/*--------------------*/
+		
 		/* Streaming step */
 		stream( dt, n_part, g, cylinder, pos, vel, acc);
 		 
-		/* debugging */
 		assert( TEST_all_particles_in_lumen(n_part, cylinder, pos) == 1 );
-		/*if(TEST_all_particles_in_lumen(n_part, cylinder, pos)!=1)
-		{
-			fprintf(stderr,"mpc.c: particles escaped the lumen after stream step in timestep %d\n",i);
-			exit(EXIT_FAILURE);
-		}*/
+		
 
 		/* Update timestep */
 		t += dt; 
@@ -1299,10 +1294,14 @@ int main(int argc, char **argv) {
 		// BEWARE! the velocity of cells after this is not to be trusted, due to the Galilean shift: it is necessary to undo it!
 		// c_p contains the occupation information, but with the Galilean shift: if we wanted to use it, we would need to undo it.		
 		
-		
 		#if CHECK_COMPRESSIBILITY
-			check_compressibility(cell_mass, n_cells, m_inv, density);
+			// substitute or combine with an assert?
+			//check_compressibility(cell_mass, n_cells, m_inv, density);
 		#endif
+		
+		/*--------------------*/
+		/*  DATA EXPORT	      */
+		/*--------------------*/
 
 		/* Export particle data for a 3D paraview visualisation */
 		#if EXPORT_STATES
@@ -1313,23 +1312,21 @@ int main(int argc, char **argv) {
 		/* Export velocity data every 50 timesteps, after the first equilibration_time timesteps*/
 		#if EXPORT_VEL_PROFILE
 			counter++;
-			if( counter==equilibration_time + 50 )
+			if( counter==equilibration_time + 25 )
 			{
-				//fprintf(stderr,"Exporting velocity profile data at step number %d\n", i);
+				encage(pos, null_shift, n_part, cylinder, c_p, 1, cell_occupation, max_oc);
+				slice_CAM_velocities(x_slice, cylinder, cell_occupation, vel, 1, slice_CAM_scalar); // only x-component of the velocities
+				update_data_header(cylinder, file_counter, x_slice, i, data_header);
+				export_CAM_data(1, slice_CAM_scalar, "./velprof", data_header,0, slice_size-1);
 				file_counter++;
-				//DEPRECATED: export_vel_profile(n_part, density, vel, pos, cylinder, x_slice, file_counter, i); 
-				export_vel_profile(n_part, density, vel, pos, cylinder, x_slice, file_counter, i);
 				counter = equilibration_time;
 			}
 		#endif
 		
-		
+	
 		
 
 	}/* end for loop (stream-collide steps) */
-
-
-#endif
 	
 
 	

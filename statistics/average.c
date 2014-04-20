@@ -4,20 +4,25 @@
 #include <time.h>
 #include <string.h>
 
+/* To do: */
+/* NOTE: CAM_average and SAM_average contain very similar code: it should be possible to merge in one function, with the option of calculating CAM or SAM */
+/* These two functons do not work for vector values */
 
 
-/* This function return the Cumulative Average of a number samples of files of the form: filename_num.dat, with 
-num from 1 to samples */
-/* The first row contains information about the geometry and the origin of the sample. It has the form: 
-   nx ny nz (global index of first cell) (global index of last cell) timestep */
-/* Subsequent rows correspond each to one particular cell in the simulation. This can be a particular x_slice in the simulation box,
-   a set of cells or the whole simulation box. */
-/* The array average is the output */
-/* The factor depends on the particular quantity being CAM-averaged: e.g. 1/3 for temperature, 1.0 for velocity, 1/3a^3 for pressure (possibly, double check this) */
-/* WARNING: This function does not check that all the files correspond to the same simulation, or whether they are "averageable" or not */
-/* This function HAS BEEN TESTED, compared to velocity_average.c everything OK */
+////////////////////////////////////////////////////////////////////////////////////////
+/// This function returns the Cumulative Average of a SCALAR over a number samples of files of the form: filename_num.dat, with num from 1 to samples.
+/// The first row of the output datafile contains information about the geometry and the origin of the sample. It has the form:  
+/// nx ny nz (global index of first cell) (global index of last cell) timestep
+/// Subsequent rows correspond each to one particular cell in the simulation. This can be a particular x_slice in the simulation box, a set of cells or the whole simulation box.
+/// This is determined by the values of the cell_idx_start and cell_idx_end
+/// The output data is stored in the array average.
+/// The factor depends on the particular quantity being CAM-averaged: 
+/// e.g. 1/3 for temperature, 1.0 for velocity, 1/3a^3 for pressure (possibly, double check this) 
+/// WARNING: This function does not check that all the files correspond to the same simulation, or whether they are "averageable" or not
+////////////////////////////////////////////////////////////////////////////////////////
 inline void CAM_average(char * filename, int samples, double factor )
 {
+	int flag;
 	/*Read header of first file to obtain geometry data */
 	FILE * fp;
 	char filename1[50]="";
@@ -77,7 +82,12 @@ inline void CAM_average(char * filename, int samples, double factor )
 			
 		}
 		/* close this file...*/
-		fclose(fp);
+		flag = fclose(fp);
+		if( flag !=0 )
+		{
+			fprintf(stderr,"export_vtk_plasma: error closing file\n Aborting...\n");
+			exit(EXIT_FAILURE);
+		}
 		/* ... prepare the name of the next file...*/
 		if(i==samples)
 		{
@@ -114,13 +124,16 @@ inline void CAM_average(char * filename, int samples, double factor )
 		}
 		fprintf(fp,"%lf\n", average[i]);
 	}
-	
-	//fprintf(fp,"\n");
-	
+		
 	/* Clean up */
 	free(average);
 	free(part_num);
-	fclose(fp);
+	flag = fclose(fp);
+	if( flag !=0 )
+	{
+		fprintf(stderr,"export_vtk_plasma: error closing file\n Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
 	
 	return; /* back to main */
 }
@@ -128,17 +141,20 @@ inline void CAM_average(char * filename, int samples, double factor )
 
 
 
-/* This function takes a different type of files compared to CAM_average. The first line is a header (same as CAM_average), but 
-   the line afterwards contains the values of the quantity to be averaged at every cell, in succession. I.e.
-   header
-   value_for_cell_start \t value_for_cell_start+1 \t ...
-*/
-/* This different data file can be generated directly by the main code, or it can be created by using the other data file formats. An
-   auxiliary function would be necessary in that case. 	
-*/
-/* This function HAS BEEN TESTED against temperature_average. It works OK. */
+////////////////////////////////////////////////////////////////////////////////////////
+/// This function returns the Sample Average of a SCALAR over a number samples of files of the form: filename_num.dat, with num from 1 to samples.
+///This function takes a different type of files compared to CAM_average. The first line is a header (same as CAM_average), but the line afterwards contains the values of the quantity to be averaged at every cell, in succession. I.e.
+///   header
+///   value_for_cell_start \t value_for_cell_start+1 \t ...
+/// This different data file can be generated with export_SAM_data_scalar(), or it can be created by using the CAM data file formats. 
+/// An auxiliary function would be necessary in that case (not implemented). 
+/// The factor depends on the particular quantity being SAM-averaged: 
+/// e.g. 1/3 for temperature, 1.0 for velocity, 1/3a^3 for pressure (possibly, double check this) 
+/// WARNING: This function does not check that all the files correspond to the same simulation, or whether they are "averageable" or not
+////////////////////////////////////////////////////////////////////////////////////////
 inline void SAM_average(char * filename, int samples, double factor )
 {
+	int flag;
 	/*Read header of first file to obtain size of slice */
 	FILE * fp;
 	char filename1[50]="";
@@ -187,7 +203,13 @@ inline void SAM_average(char * filename, int samples, double factor )
 			
 		}
 		/* close this file...*/
-		fclose(fp);
+		flag = fclose(fp);
+		if( flag !=0 )
+		{
+			fprintf(stderr,"export_vtk_plasma: error closing file\n Aborting...\n");
+			exit(EXIT_FAILURE);
+		}
+	
 		/* ... prepare the name of the next file...*/
 		if(i==samples)
 		{
@@ -223,7 +245,12 @@ inline void SAM_average(char * filename, int samples, double factor )
 		
 	/* Clean up */
 	free(average);
-	fclose(fp);
+	flag = fclose(fp);
+	if( flag !=0 )
+	{
+		fprintf(stderr,"export_vtk_plasma: error closing file\n Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
 	
 	return; /* back to main */
 }
@@ -235,8 +262,8 @@ inline void SAM_average(char * filename, int samples, double factor )
 /*		MAIN		 */
 /*-------------------------------*/
 
-/* Applicable to CAM averages only, for now */
-/* call with arguments filename numberOFsamples number, with number being 1 for velocities averages, 3.0 for temperature averages and 3*a^3 for pressure averages */
+/* call with arguments: filename numberOFsamples number */
+/* with number being 1 for velocities averages, 3.0 for temperature averages and 3*a^3 for pressure averages (perhaps, needs checking) */
 int main(int argc, char **argv) {
 
 	/*

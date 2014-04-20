@@ -32,10 +32,10 @@ and accelerations of all particles. It also exports auxiliary vtk files: collisi
 #define EXPORT_STATES 0
 
 /* Exports files to do CAM average over a x_slice, ready to plot the parabolic profile of POiseuille flow */
-#define EXPORT_VEL_PROFILE 0
+#define EXPORT_VEL_PROFILE 1
 
 /* Checks, at every timestep, that the instantaneous density at any collision cell is less than DENSITY_TOLxInitial density */
-#define CHECK_COMPRESSIBILITY 1
+#define CHECK_COMPRESSIBILITY 0
 
 /* At setup, there is an avarega density per cell (bulk cells have a higher density than this, boundary cells have a lower density)*/
 /* DENSITY_TOL defines the % of variation allowed from the average density. For example, 50% variation is DENSITY_TOL = 0.5 */
@@ -45,7 +45,7 @@ and accelerations of all particles. It also exports auxiliary vtk files: collisi
 #define DENSITY_MAX 10
 
 /* Exports a file, at regular timesteps, containing the temperature in each collision cell. */
-#define CHECK_TEMPERATURE 0
+#define EXPORT_TEMPERATURE 0
 
 /* Set to 1 when running equilibration tests. It exports the momentum (3 components) and kinetic energy per particle (average over all particles at that timestep),
 at every timestep. Redo calculations using the script.pbs.oXXX file data, which includes all geometrical data and the RNG seed. */

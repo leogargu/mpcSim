@@ -43,7 +43,9 @@ $(EXE) : $(OBJECTS)
 	@echo "LDFLAGS="$(LDFLAGS) 
 	@echo "CFLAGS="$(CFLAGS)
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
+# TARGETS
+#------------------------------------------------------------------------------------------------------------
 # Purge object files and executable
 clean :
 	rm *.o ./$(EXE)
@@ -54,8 +56,8 @@ memory :
 	valgrind --leak-check=yes ./$(EXE) $(INPUT)
 
 # Generate documentation with doxygen
-#doc :
-#	make 
+doc :
+	doxygen Doxyfile
 	
 # Profile the code: force no inlining and remove optimization flags
 profile:
