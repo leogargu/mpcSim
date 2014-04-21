@@ -991,7 +991,7 @@ int main(int argc, char **argv) {
 	double t = 0.0;					/// Time
 	int equilibration_export = 10;			/// Number of timesteps in between data exports during the equilibration phase
 	int data_header[6] = { 0, cylinder.n_cells_dim[0], cylinder.n_cells_dim[1], cylinder.n_cells_dim[2], -1, 0};
-	//AQUI
+	double aux3Dvector[3] = {0.0, 0.0, 0.0};
 
 	
 	/*------------------------------------------------------------------*/
@@ -1231,6 +1231,14 @@ int main(int argc, char **argv) {
 		export_vtk_plasma(0, pos, vel,acc, n_part);
 	#endif
 	
+	/*------------------------------------------------------------------*/
+	/*	PREPARE optional pre-simulation variables	            */
+	/*------------------------------------------------------------------*/
+	#if MONITOR_EQUILIBRATION
+		FILE * eq_fp;
+		eq_fp = fopen("./../DATA/equilibration.dat","w");
+		if(eq_fp == NULL){printf("mpc.c: Error opening eq_fp file. Aborting...\n "); exit(EXIT_FAILURE);}
+	#endif
 	
 	/*------------------------------------------------------------------*/
 	/*	SIMULATION						    */
@@ -1317,10 +1325,15 @@ int main(int argc, char **argv) {
 				encage(pos, null_shift, n_part, cylinder, c_p, 1, cell_occupation, max_oc);
 				slice_CAM_velocities(x_slice, cylinder, cell_occupation, vel, 1, slice_CAM_scalar); // only x-component of the velocities
 				update_data_header(cylinder, file_counter, x_slice, i, data_header);
-				export_CAM_data(1, slice_CAM_scalar, "./velprof", data_header,0, slice_size-1);
+				export_CAM_data(1, slice_CAM_scalar, "./../DATA/velprof", data_header,0, slice_size-1);
 				file_counter++;
 				counter = equilibration_time;
 			}
+		#endif
+		
+		#if MONITOR_EQUILIBRATION
+			total_momentum(n_part, m, vel, aux3Dvector);
+			fprintf(eq_fp,"%lf \t %lf \t %lf \n", aux3Dvector[0], aux3Dvector[1], aux3Dvector[2]);
 		#endif
 		
 	
@@ -1329,6 +1342,15 @@ int main(int argc, char **argv) {
 	}/* end for loop (stream-collide steps) */
 	
 
+	/*------------------------------------------------------------------*/
+	/*	FINISH BUSINESS with optional macros			    */
+	/*------------------------------------------------------------------*/
+	
+	#if MONITOR_EQUILIBRATION
+		fclose_flag = fclose(eq_fp);
+		if(fclose_flag != 0){printf("mpc.c: Error closing eq_fp file. Aborting...\n "); exit(EXIT_FAILURE);}
+	#endif
+	
 	
 	/*------------------------------------------------------------------*/
 	/*	EXITING							    */

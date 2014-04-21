@@ -10,7 +10,7 @@
 
 
 ////////////////////////////////////////////////////////////////////////////////////////
-/// This function returns the Cumulative Average of a SCALAR over a number samples of files of the form: filename_num.dat, with num from 1 to samples.
+/// This function returns the Cumulative Average of a SCALAR over a number of files of the form: filename_num.dat, with num from first_file to last_file.
 /// The first row of the output datafile contains information about the geometry and the origin of the sample. It has the form:  
 /// nx ny nz (global index of first cell) (global index of last cell) timestep
 /// Subsequent rows correspond each to one particular cell in the simulation. This can be a particular x_slice in the simulation box, a set of cells or the whole simulation box.
@@ -20,14 +20,16 @@
 /// e.g. 1/3 for temperature, 1.0 for velocity, 1/3a^3 for pressure (possibly, double check this) 
 /// WARNING: This function does not check that all the files correspond to the same simulation, or whether they are "averageable" or not
 ////////////////////////////////////////////////////////////////////////////////////////
-inline void CAM_average(char * filename, int samples, double factor )
+inline void CAM_average(char * filename, int first_file, int last_file, double factor )
 {
 	int flag;
 	/*Read header of first file to obtain geometry data */
 	FILE * fp;
+	char intaschar[20];
 	char filename1[50]="";
 	strcpy(filename1,filename);
-	strcat(filename1,"_1.dat");	
+	sprintf(intaschar, "_%d.dat", first_file);
+	strcat(filename1,intaschar);	
 	
 	fp=fopen(filename1,"r"); 
 	if( fp == NULL ){ perror("CAM_average: Error while opening the file.\n"); exit(EXIT_FAILURE);}
@@ -63,10 +65,9 @@ inline void CAM_average(char * filename, int samples, double factor )
 	/* Read data from all files and start the average */
 	double row_length; // this is the occupation number for a given cell. It is stored as a double because the data file will be a 2D array of doubles, only the first element will be "special"
 	double aux;
-	char intaschar[20];
 
 	
-	for(i=1; i<=samples; i++) //file 1 is open the first time that we pass through here	
+	for(i=first_file; i<=last_file; i++) //file 1 is open the first time that we pass through here	
 	{
 		for(j=0;j<num_cells;j++)
 		{
@@ -89,13 +90,15 @@ inline void CAM_average(char * filename, int samples, double factor )
 			exit(EXIT_FAILURE);
 		}
 		/* ... prepare the name of the next file...*/
-		if(i==samples)
+		if(i==last_file)
 		{
 			break; 
 		}
 		strcpy(filename1,filename);		
 		sprintf(intaschar, "_%d.dat", i+1);
 		strcat(filename1,intaschar);
+		
+		printf("Processing file %s\n",filename1);
 		
 		/*...and open the next file */		
 		fp=fopen(filename1,"r"); 
@@ -142,7 +145,7 @@ inline void CAM_average(char * filename, int samples, double factor )
 
 
 ////////////////////////////////////////////////////////////////////////////////////////
-/// This function returns the Sample Average of a SCALAR over a number samples of files of the form: filename_num.dat, with num from 1 to samples.
+/// This function returns the Sample Average of a SCALAR over a number of files of the form: filename_num.dat, with num from fist_file to last_file.
 ///This function takes a different type of files compared to CAM_average. The first line is a header (same as CAM_average), but the line afterwards contains the values of the quantity to be averaged at every cell, in succession. I.e.
 ///   header
 ///   value_for_cell_start \t value_for_cell_start+1 \t ...
@@ -152,14 +155,16 @@ inline void CAM_average(char * filename, int samples, double factor )
 /// e.g. 1/3 for temperature, 1.0 for velocity, 1/3a^3 for pressure (possibly, double check this) 
 /// WARNING: This function does not check that all the files correspond to the same simulation, or whether they are "averageable" or not
 ////////////////////////////////////////////////////////////////////////////////////////
-inline void SAM_average(char * filename, int samples, double factor )
+inline void SAM_average(char * filename, int first_file, int last_file, double factor )
 {
 	int flag;
 	/*Read header of first file to obtain size of slice */
-	FILE * fp;
+	FILE * fp;	
+	char intaschar[20];
 	char filename1[50]="";
 	strcpy(filename1,filename);
-	strcat(filename1,"_1.dat");	
+	sprintf(intaschar, "_%d.dat", first_file);
+	strcat(filename1,intaschar);
 	
 	fp=fopen(filename1,"r"); 
 	if( fp == NULL ){ perror("SAM_average: Error while opening the file.\n"); exit(EXIT_FAILURE);}
@@ -189,9 +194,8 @@ inline void SAM_average(char * filename, int samples, double factor )
 	
 	/* Read data from all files and start the average */
 	double aux;
-	char intaschar[20];
 		
-	for(i=1; i<=samples; i++) //file 1 is open the first time that we pass through here	
+	for(i=first_file; i<=last_file; i++) //file 1 is open the first time that we pass through here	
 	{
 		for(j=0;j<num_cells;j++)
 		{
@@ -211,13 +215,15 @@ inline void SAM_average(char * filename, int samples, double factor )
 		}
 	
 		/* ... prepare the name of the next file...*/
-		if(i==samples)
+		if(i==last_file)
 		{
 			break; 
 		}
 		strcpy(filename1,filename);		
 		sprintf(intaschar, "_%d.dat", i+1);
 		strcat(filename1,intaschar);
+		
+		printf("Processing file %s\n",filename1);
 		
 		/*...and open the next file */		
 		fp=fopen(filename1,"r"); 
@@ -236,6 +242,8 @@ inline void SAM_average(char * filename, int samples, double factor )
 	
 	fprintf( fp, "%d \t %d \t %d \t %d \t %d \n", nx, ny, nz, cell_idx_start, cell_idx_end);
 		
+	int samples = last_file - first_file + 1;
+	
 	double fact = factor * (1.0/(double)samples);
 	
 	for(i=0; i<num_cells; i++)
@@ -262,7 +270,7 @@ inline void SAM_average(char * filename, int samples, double factor )
 /*		MAIN		 */
 /*-------------------------------*/
 
-/* call with arguments: filename numberOFsamples number */
+/* call with arguments: filename (first file index) (last file index) number */
 /* with number being 1 for velocities averages, 3.0 for temperature averages and 3*a^3 for pressure averages (perhaps, needs checking) */
 int main(int argc, char **argv) {
 
@@ -270,16 +278,17 @@ int main(int argc, char **argv) {
 	argv[0] is the program name
 	argv[1] is the type of average: CAM or SAM
 	argv[2] is name of files
-	argv[3] is the number of samples-1 
-	argv[4] is a factor (see note above)
+	argv[3] is the index of the first file to be processed
+	argv[4] is teh index of the last file to be processed
+	argv[5] is a factor (see note above)
 	*/
 	
-	printf("WARNING: average.c only calculates CAM or SAM averages of scalar quantities.");
+	printf("WARNING: average.c only calculates CAM or SAM averages of scalar quantities.\n");
 	
-	if(argc!=5)
+	if(argc!=6)
 	{
 		printf("Wrong number of arguments. Call as:\n");
-		printf("./average <av.type> <filename> <n.samples-1> <factor>\n<av.type>\tSAM or CAM\n<filename>\tdatafile basic name\n<n.samples>\tnumber of datafiles\n<factor>\tcorrection factor\n");
+		printf("./average <av.type> <filename> <first file index> <last file index> <factor>\n<av.type>\tSAM or CAM\n<filename>\tdatafile basic name\n<n.samples>\tnumber of datafiles\n<factor>\tcorrection factor\n");
 		printf("Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
@@ -289,17 +298,17 @@ int main(int argc, char **argv) {
 	strcat(filename,argv[2]);
 	
 	double number;
-	number = strtod(argv[4], NULL);
+	number = strtod(argv[5], NULL);
 	
 	
 	if(strcmp(argv[1], "CAM")==0)
 	{
 		//printf("you chose CAM\n");
-		CAM_average(filename, atoi(argv[3]), 1.0/number );
+		CAM_average(filename, atoi(argv[3]), atoi(argv[4]), 1.0/number );
 	}else if(strcmp(argv[1], "SAM")==0)
 	{
 		//printf("you chose SAM\n");
-		SAM_average(filename, atoi(argv[3]), 1.0/number);
+		SAM_average(filename, atoi(argv[3]), atoi(argv[4]), 1.0/number);
 	}else{
 		printf("Type of average not recognized. Aborting...\n");
 		exit(EXIT_FAILURE);

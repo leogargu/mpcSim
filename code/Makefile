@@ -41,8 +41,8 @@ INPUT = input.dat
 # Build the executable by linking the object files.
 $(EXE) : $(OBJECTS) 
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) 
-	@echo "LDFLAGS="$(LDFLAGS) 
-	@echo "CFLAGS="$(CFLAGS)
+	#@echo "LDFLAGS="$(LDFLAGS) 
+	#@echo "CFLAGS="$(CFLAGS)
 
 #------------------------------------------------------------------------------------------------------------
 # TARGETS

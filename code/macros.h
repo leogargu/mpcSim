@@ -49,7 +49,7 @@ and accelerations of all particles. It also exports auxiliary vtk files: collisi
 
 /* Set to 1 when running equilibration tests. It exports the momentum (3 components) and kinetic energy per particle (average over all particles at that timestep),
 at every timestep. Redo calculations using the script.pbs.oXXX file data, which includes all geometrical data and the RNG seed. */
-#define CHECK_EQUILIBRATION 1
+#define MONITOR_EQUILIBRATION 1
 
 /* Turns the shift of the grid prior to each collision step on/off*/
 #define GALILEAN_SHIFT 1
