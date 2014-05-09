@@ -10,8 +10,11 @@
 
 #include "macros.h"
 
+#include "export_routines.h"
 
 
+
+#if 0
 
 //////////////////////////////////////////////////////////////////////////
 /// This function exports the data contained in the array data in a file format suitable for calculating a SAM average with average.c 
@@ -180,12 +183,19 @@ inline void export_CAM_data(int is_scalar, double ** data, char * filename, int 
 	return; /* back to main*/
 }
 
+#endif
 
 
-#define TEST_CAM 1
-#define TEST_SAM 1
 
 
+// Compile as:
+// gcc testCAMSAMexport.c -o test
+// Call as:
+// ./test 10, 5, 20 a > screen.out
+// where a=0,1,2,3 for SAM scalar, SAM vector, CAM scalar or CAM vector respectively
+// Compare output with exported files by running:
+// bash test_export.sh
+// Modify variables in the .sh script to do stress testing
 int main(int argc, char **argv) {
 
 	srand(time(NULL));
@@ -199,12 +209,15 @@ int main(int argc, char **argv) {
 	maxocc =atoi(argv[2]);
 	number_range=atof(argv[3]);
 	
-	//printf("N_cells=%d,maxocc=%d,number_range=%lf\n",n_cells,maxocc,number_range);
-
-	int cell_start = n_cells*(1.0*rand()/RAND_MAX);
-	int cell_end = cell_start + (int)(n_cells-cell_start)*(1.0*rand()/RAND_MAX);
+	int test_case=atoi(argv[4]);
+	assert(test_case==0 || test_case==1 || test_case==2 || test_case==3);
 	
-	printf("start: %d, end: %d\n",cell_start,cell_end);
+
+	//int cell_start = n_cells*(1.0*rand()/RAND_MAX);
+	//int cell_end = cell_start + (int)(n_cells-cell_start)*(1.0*rand()/RAND_MAX);
+	
+	int cell_start = 0; 
+	int cell_end = n_cells-1;
 	
 	double a= 1.0;
 	double L=8.0;
@@ -270,53 +283,60 @@ int main(int argc, char **argv) {
 		}
 	}
 	
+	/*----------------------------------------------------------------------------------------*/
 	/* Print to screen */
-#if TEST_CAM
-	for(i=cell_start; i<cell_end; i++)
+	if(test_case==2)
 	{
-		printf("%.0lf",array_scalar[i][0]);
-			
-		for(j=1; j<=array_scalar[i][0]; j++)
+		for(i=cell_start; i<=cell_end; i++)
 		{
-			printf("\t%lf",array_scalar[i][j]);
+			printf("%.0lf",array_scalar[i][0]);
+				
+			for(j=1; j<=array_scalar[i][0]; j++)
+			{
+				printf("\t%lf",array_scalar[i][j]);
+			}
+			printf("\n");
 		}
-		printf("\n");
-	}	
-	
+		/* Use export routines */
+		export_CAM_data(1, array_scalar, "CAM_scalar", header, cell_start, cell_end);
+	}else if(test_case==3)
+	{
 
-	for(i=cell_start; i<cell_end; i++)
-	{
-		printf("%.0lf",array_vector[i][0]);
-			
-		for(j=1; j<=array_vector[i][0]; j++)
+		for(i=cell_start; i<=cell_end; i++)
 		{
-			printf("\t%lf\t%lf\t%lf",array_vector[i][3*(j-1)+1],array_vector[i][3*(j-1)+2],array_vector[i][3*(j-1)+3]);
+			printf("%.0lf",array_vector[i][0]);
+			
+			for(j=1; j<=array_vector[i][0]; j++)
+			{
+				printf("\t%lf\t%lf\t%lf",array_vector[i][3*(j-1)+1],array_vector[i][3*(j-1)+2],array_vector[i][3*(j-1)+3]);
+			}
+			printf("\n");
+		}
+		/* Use export routines */
+		export_CAM_data(0, array_vector, "CAM_vector", header, cell_start, cell_end); //defensive programming in case it is called like this?
+	}
+	
+	if(test_case==0)
+	{
+		for(i=cell_start; i<=cell_end; i++)
+		{
+			printf("%lf\t", SAM_scalar[i]);
 		}
 		printf("\n");
-	}
+		/* Use export routines */
+		export_SAM_data_scalar(SAM_scalar, "SAM_scalar", header, cell_start, cell_end);
 	
-	/* Use export routines */
-	export_CAM_data(1, array_scalar, "CAM_scalar", header, cell_start, cell_end);
-	export_CAM_data(0, array_vector, "CAM_vector", header, cell_start, cell_end); //defensive programming in case it is called like this?
-#endif
-#if TEST_SAM
-	for(i=cell_start; i<=cell_end; i++)
+	}else if(test_case==1)
 	{
-		printf("%lf\t", SAM_scalar[i]);
+		for(i=cell_start; i<=cell_end; i++)
+		{
+			printf("%lf\t%lf\t%lf\n",SAM_vector[i][0],SAM_vector[i][1],SAM_vector[i][2]);
+		}
+		/* Use export routines */
+		export_SAM_data_vector(SAM_vector, "SAM_vector", header, cell_start, cell_end);
 	}
-	printf("\n");
-	for(i=cell_start; i<=cell_end; i++)
-	{
-		printf("%lf\t%lf\t%lf\n",SAM_vector[i][0],SAM_vector[i][1],SAM_vector[i][2]);
-	}
 	
-	/* Use export routines */
-	export_SAM_data_scalar(SAM_scalar, "SAM_scalar", header, cell_start, cell_end);
-	export_SAM_data_vector(SAM_vector, "SAM_vector", header, cell_start, cell_end);
-#endif
-	
-	
-	
+	/*----------------------------------------------------------------------------------------*/	
 	/* Clean up */
 	for(i=0; i<n_cells; i++)
 	{

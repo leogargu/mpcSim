@@ -1103,10 +1103,10 @@ int main(int argc, char **argv) {
 		#endif
 		
 	
-		/* Export velocity data every 50 timesteps, after the first equilibration_time timesteps*/
+		/* Export velocity data every 10 timesteps, after the first equilibration_time timesteps*/
 		#if EXPORT_VEL_PROFILE
 			counter++;
-			if( counter==equilibration_time + 25 )
+			if( counter==equilibration_time + 10 )
 			{
 				encage(pos, null_shift, n_part, cylinder, c_p, 1, cell_occupation, max_oc);
 				slice_CAM_velocities(x_slice, cylinder, cell_occupation, vel, 1, slice_CAM_scalar); // only x-component of the velocities
