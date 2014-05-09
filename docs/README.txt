@@ -59,6 +59,7 @@ Anotehr pending point is teh average of the velocity over the points of the same
 Lastly but very important, estimate the slip when the fluid velociy is obtained with teh CAM average.
 
 
-
-
 -----------------------------------------------
+
+WANTED NEW FEATURES / TODOS
+- Check for health of data files. Are they complete? Do they have the right format? Data corrupted?
