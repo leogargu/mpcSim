@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
 	if(argc!=7)
 	{
 		printf("Wrong number of arguments. Call as:\n");
-		printf("./average <av.type> <filename> <first file index> <last file index> <factor> <verbose>\n<av.type>\tSAM or CAM\n<filename>\tdatafile basic name\n<n.samples>\tnumber of datafiles\n<factor>\tcorrection factor\n<verbose>\tverbose mode 1/0");
+		printf("./average <av.type> <filename> <first file index> <last file index> <factor> <verbose>\n<av.type>\tSAM or CAM\n<filename>\tdatafile basic name\n<first file index>\t Index of first file (inclusive)\n<last file index>\t Index of last file (inclusive)\n<factor>\tcorrection factor\n<verbose>\tverbose mode 1/0\n");
 		printf("Aborting...\n");
 		exit(EXIT_FAILURE);
 	}

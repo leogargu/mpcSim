@@ -1,3 +1,12 @@
+# Before running this script, calculate velprof_CAM_averaged.dat by running this from /statistics:
+# >> ./average CAM velprof <first file index> <last file index> 1.0 <verbose>
+#
+# Then, run this from the /python directory with:
+# >> python velprofile.py
+#
+# This generates an image, velprofile.png, of the cross-sectional velocity profile.
+
+
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from mpl_toolkits.mplot3d import Axes3D
