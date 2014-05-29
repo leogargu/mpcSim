@@ -2,18 +2,24 @@
 # >> ./average CAM velprof <first file index> <last file index> 1.0 <verbose>
 #
 # Then, run this from the /python directory with:
-# >> python velprofile.py
+# >> python velprofile.py "Name of file in DATA directory"
 #
-# This generates an image, velprofile.png, of the cross-sectional velocity profile.
+# This generates an image, velprofile.png, of the cross-sectional velocity profile, for example.
 
 
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
+import sys
 
 #get header
-fh = open('./../../DATA/velprof_CAM_averaged.dat','r')
+if sys.argv[1]!='':
+	fh=open('./../../DATA/'+sys.argv[1],'r')
+else:
+	print "Call as: python test.py <name of av file to plot>"
+	sys.exit(1)
+	
 header=fh.readline()
 fh.close()
 
@@ -25,7 +31,7 @@ nz=int(dimensions[2])
 
 
 #get data for the slice to be plotted
-data=np.genfromtxt('./../../DATA/velprof_CAM_averaged.dat',skip_header=1,delimiter='\n')
+data=np.genfromtxt('./../../DATA/'+sys.argv[1],skip_header=1,delimiter='\n')
 
 
 #prepare data for plotting
@@ -33,7 +39,7 @@ data=data.reshape(ny,nz)
 
 
 #plot
-im=plt.imshow(data,interpolation='bicubic')#or bilinear, nearest
+im=plt.imshow(data,interpolation='bicubic')#or bilinear, nearest, bicubic
 plt.colorbar(im, orientation='vertical')
 
 # Save it to disk
