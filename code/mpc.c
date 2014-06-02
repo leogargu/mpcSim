@@ -1119,7 +1119,7 @@ int main(int argc, char **argv) {
 		
 		#if MONITOR_EQUILIBRATION
 			total_momentum(n_part, m, vel, aux3Dvector);
-			fprintf(eq_fp,"%lf \t %lf \t %lf \n", aux3Dvector[0], aux3Dvector[1], aux3Dvector[2]);
+			fprintf(eq_fp,"%lf \t %lf \t %lf \t %lf\n", aux3Dvector[0], aux3Dvector[1], aux3Dvector[2], total_kinetic_energy(n_part, m, vel) );
 		#endif
 		
 	

@@ -143,7 +143,7 @@ inline void CAM_average(char * filename, int first_file, int last_file, double f
 	flag = fclose(fp);
 	if( flag !=0 )
 	{
-		fprintf(stderr,"export_vtk_plasma: error closing file\n Aborting...\n");
+		fprintf(stderr,"CAM_average: error closing file\n Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
 	
@@ -270,7 +270,7 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 	
 	for(i=0; i<num_cells; i++)
 	{
-		fprintf(fp, "%lf\t", fact*average[i] );
+		fprintf(fp, "%lf\n", fact*average[i] );
 	}
 		
 	/* Clean up */

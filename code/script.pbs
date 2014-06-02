@@ -11,4 +11,6 @@ cd $PBS_O_WORKDIR
 # Execute a.out
 ./mpcSim input.dat
 
-
+#NOte: max mem per core in MInerva:2012MB, max cores per node:12
+#Limit per user: 576 cores, 48 hours runtime, 1158912MB of memory
+#To check what happened to a finished job, run: >>checkjob JOBID -v

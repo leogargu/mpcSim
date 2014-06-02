@@ -2,7 +2,8 @@
 # >> ./average CAM velprof <first file index> <last file index> 1.0 <verbose>
 #
 # Then, run this from the /python directory with:
-# >> python velprofile.py "Name of file in DATA directory"
+# >> python velprofile.py <Name of file in DATA directory> <Name of output plot (without the extension)>
+# If the name for the output plot is omitted, the result is saved as "output.png"
 #
 # This generates an image, velprofile.png, of the cross-sectional velocity profile, for example.
 
@@ -16,8 +17,13 @@ import sys
 #get header
 if sys.argv[1]!='':
 	fh=open('./../../DATA/'+sys.argv[1],'r')
+	if len(sys.argv)==3:
+		outputname=sys.argv[2]+".png"
+	else:
+		outputname="output.png"
+		print "Saving plot in output.png\n"
 else:
-	print "Call as: python test.py <name of av file to plot>"
+	print "Call as: python test.py <name of av file to plot> <name of output plot,without the extension>"
 	sys.exit(1)
 	
 header=fh.readline()
@@ -39,11 +45,11 @@ data=data.reshape(ny,nz)
 
 
 #plot
-im=plt.imshow(data,interpolation='bicubic')#or bilinear, nearest, bicubic
+im=plt.imshow(data,interpolation='nearest')#or bilinear, nearest, bicubic
 plt.colorbar(im, orientation='vertical')
 
 # Save it to disk
-plt.savefig("./velprofile.png")#how to save eps?
+plt.savefig("./"+outputname)#how to save eps?
 
 #how to add axis labels?
 
