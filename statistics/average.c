@@ -54,6 +54,7 @@ int main(int argc, char **argv) {
 	}else if(strcmp(argv[1], "SAM")==0)
 	{
 		//printf("you chose SAM\n");
+		printf("Doing SAM average: Please make sure the data files used have NAN (math.h) values in empty collision cells. average.c does not check this. ");
 		SAM_average(filename, atoi(argv[3]), atoi(argv[4]), 1.0/number, atoi(argv[6]));
 	}else{
 		printf("Type of average not recognized. Aborting...\n");

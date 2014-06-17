@@ -19,8 +19,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include<time.h>
-#include<assert.h>
+#include <time.h>
+#include <assert.h>
 #include <string.h>
 
 #include "mpc.h"    /*  Struct definitions, function prototypes and global variables that must be made available to other files  */
@@ -28,7 +28,7 @@
 
 /* GNU GSL*/
 #include <gsl/gsl_rng.h>
-#include<gsl/gsl_randist.h>
+#include <gsl/gsl_randist.h>
 /* See available algorithms for GSL in: */
 /*  http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html   */
 
@@ -42,6 +42,7 @@
 /*-------------------------------*/
 
 // 0,1,2 equivalent to x, y, z
+
 
 //////////////////////////////////////////////////////////////////////////
 /// Returns the norm squared of a 3D vector 

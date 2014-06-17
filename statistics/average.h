@@ -4,9 +4,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-//#include <math.h>
+#include <math.h> //isnan lives here
 //#include <time.h>
 #include <string.h>
+#include <assert.h>
 
 
 
@@ -165,6 +166,8 @@ inline void CAM_average(char * filename, int first_file, int last_file, double f
 /// WARNING: This function does not check that all the files correspond to the same simulation, or whether they are "averageable" or not
 /// verbose: 0 for running silently, 1 for printing on screen the file being processed
 ////////////////////////////////////////////////////////////////////////////////////////
+// Still one big problem, what to do with exterior cells?
+//AQUI
 inline void SAM_average(char * filename, int first_file, int last_file, double factor, int verbose )
 {
 	int flag;
@@ -185,6 +188,7 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 	
 	fscanf( fp, "%d \t %d \t %d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &cell_idx_start, &cell_idx_end, &step);
 	
+	
 	/* Identify volume to study (set of collision cells) */
 	int num_cells = cell_idx_end - cell_idx_start + 1;
 	
@@ -192,7 +196,16 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 	double * average;
 	
 	average = malloc( num_cells * sizeof(double) );
-	if (average==NULL) {printf("Error allocating average in average_SAM call \n"); exit(EXIT_FAILURE);}
+	if (average==NULL) {printf("SAM_average: Error allocating average array. \n"); exit(EXIT_FAILURE);}
+	
+	
+	/* Need to discard empty cells in their average */
+	int * samples;
+	samples=malloc(num_cells*sizeof(int));
+	if (samples==NULL) {printf("SAM_average: error allocating samples array. \n"); exit(EXIT_FAILURE);}
+	
+	int samples_baseline = last_file - first_file + 1;
+	
 	
 	/* Initialization */
 	int i,j;
@@ -200,8 +213,9 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 	for(i=0; i<num_cells; i++ )
 	{
 		average[i] = 0.0;
+		samples[i] = samples_baseline;
 	}
-	
+		
 	/* Read data from all files and start the average */
 	double aux=0.0;
 	int read_flag=0;
@@ -217,9 +231,13 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 				fprintf(stderr,"SAM_average: Error reading number from file. Aborting...\n");
 				exit(EXIT_FAILURE);
 			}
-				
-			average[j] += aux;
 			
+			if(isnan(aux))
+			{
+				samples[i]=samples[i]-1; //Do not include in the average cells which are empty	
+			}else{
+				average[j] += aux;
+			}			
 			
 		}
 		/* close this file...*/
@@ -264,17 +282,24 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 	
 	fprintf( fp, "%d \t %d \t %d \t %d \t %d \n", nx, ny, nz, cell_idx_start, cell_idx_end);
 		
-	int samples = last_file - first_file + 1;
+
 	
-	double fact = factor * (1.0/(double)samples);
+	//double fact = factor * (1.0/(double)samples);
 	
 	for(i=0; i<num_cells; i++)
 	{
-		fprintf(fp, "%lf\n", fact*average[i] );
+		assert( samples[i]>=0 );
+		if( samples[i]!=0 ){
+			fprintf(fp, "%lf\n", average[i]/(double)samples[i] );
+		}else{
+			fprintf(stderr,"SAM_average: One or more cells are empty throughout the sample. Do the average over more samples.\n Aborting...\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 		
 	/* Clean up */
 	free(average);
+	free(samples);
 	flag = fclose(fp);
 	if( flag !=0 )
 	{
@@ -290,21 +315,25 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 
 /////////////////////////////////////////////////////////////////////////////
 /// Transforms a CAM file filename into a SAM file
+/// filename - name of the CAM-formated file, without the .dat extension, to be converted into SAM format
 /////////////////////////////////////////////////////////////////////////////
-/* not tested */
+/* Tested */
 inline void CAM_to_SAM(char * filename)
 {	
 	int flag, i,j;
 
 	FILE * fp;
-	FILE * fp_out;	
-	fp = fopen(filename,"r");
-	if( fp==NULL ){printf("CAM_to_SAM: Error opening file. Aborting...\n");exit(EXIT_FAILURE);}
-	
-	
+	FILE * fp_out;
+
 	char filename1[50]="";
 	strcpy(filename1,filename);
-	strcat(filename1,"_SAM");
+	strcat(filename1,"_SAMconverted.dat");	
+	
+	char filename2[50]="";
+	strcpy(filename2,filename);
+	strcat(filename2,".dat");
+	fp = fopen(filename2,"r");
+	if( fp==NULL ){printf("CAM_to_SAM: Error opening file. Aborting...\n");exit(EXIT_FAILURE);}
 	
 
 	fp_out = fopen(filename1,"w");
@@ -323,7 +352,7 @@ inline void CAM_to_SAM(char * filename)
 	int num_cells = cell_idx_end - cell_idx_start + 1;
 	
 	/* Parsing from CAM to SAM */
-	double average=0;
+	double average=0.0;
 	double aux;
 	double row_length;
 	
@@ -331,7 +360,8 @@ inline void CAM_to_SAM(char * filename)
 	{
 		/* get local density */
 		fscanf(fp, "%lf", &row_length);
-		fprintf(fp_out,"%lf", row_length);
+		/* export local density */
+		fprintf(fp_out,"%.0lf\t", row_length);
 		for(j=1; j<=row_length; j++)
 		{
 			fscanf(fp,"%lf",&aux);
@@ -339,8 +369,12 @@ inline void CAM_to_SAM(char * filename)
 		}
 		if( row_length !=0 )
 		{
-			fprintf(fp_out,"\t %lf",average/((double)row_length) );
+			fprintf(fp_out,"%lf\n",average/((double)row_length) );
+		}else{   //else, leave the entry in this second column empty
+			fprintf(fp_out,"\n");
 		}
+		
+		/* reset for the next average line */
 		average = 0.0;
 		
 	}
@@ -349,13 +383,13 @@ inline void CAM_to_SAM(char * filename)
 	flag = fclose(fp);
 	if(flag!=0)
 	{
-		printf("CAM_to_SAM: Error closing file. Aborting...\n");
+		printf("CAM_to_SAM: Error closing input file. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
 	flag = fclose(fp_out);
 	if(flag!=0)
 	{
-		printf("CAM_to_SAM: Error closing file. Aborting...\n");
+		printf("CAM_to_SAM: Error closing output file. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
 	

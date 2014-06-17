@@ -24,10 +24,11 @@ int main(int argc, char **argv) {
 	argv[5] is a factor (see note above)
 	*/
 
-	SAM_average("testSAM1", 0, 2, 1.0, 0);
-	CAM_average("testCAM1", 0, 2, 1.0, 0);
+	SAM_average("./SAM1/testSAM1", 0, 2, 1.0, 0);
+	CAM_average("./CAM1/testCAM1", 0, 2, 1.0, 0);
 
-	//output file: test1_SAM_averaged.dat
+	CAM_to_SAM("./CAMtoSAM/testCAM1");
+	CAM_to_SAM("./CAMtoSAM/testCAM2");
 
 
 	return 0;
