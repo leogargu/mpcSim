@@ -204,7 +204,7 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 	samples=malloc(num_cells*sizeof(int));
 	if (samples==NULL) {printf("SAM_average: error allocating samples array. \n"); exit(EXIT_FAILURE);}
 	
-	int samples_baseline = last_file - first_file + 1;
+	int samples_baseline = last_file - first_file + 1;//maximum number of samples that will be used in any cell
 	
 	
 	/* Initialization */
@@ -226,27 +226,23 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 		for(j=0;j<num_cells;j++)
 		{
 			read_flag=fscanf(fp, "%lf", &aux);
-			if(read_flag!=1)
-			{
-				fprintf(stderr,"SAM_average: Error reading number from file. Aborting...\n");
-				exit(EXIT_FAILURE);
-			}
+			if(read_flag!=1){ fprintf(stderr,"SAM_average: Error reading number from file. Aborting...\n"); exit(EXIT_FAILURE); }
 			
-			if(isnan(aux))
+			if(aux > 0.0)//then we have some particle(s) in that cell, so we accept this sample
 			{
-				samples[i]=samples[i]-1; //Do not include in the average cells which are empty	
-			}else{
-				average[j] += aux;
-			}			
+				read_flag=fscanf(fp, "%lf", &aux);
+				if(read_flag!=1){ fprintf(stderr,"SAM_average: Error reading number from file. Aborting...\n"); exit(EXIT_FAILURE); }
+				
+				average[j]+=aux;
+				
+			}else{//this cell (j) is empty in this sample. We discard this data *for this cell only*
+				samples[j] -= 1 ;
+			}		
 			
 		}
 		/* close this file...*/
 		flag = fclose(fp);
-		if( flag !=0 )
-		{
-			fprintf(stderr,"export_vtk_plasma: error closing file\n Aborting...\n");
-			exit(EXIT_FAILURE);
-		}
+		if( flag !=0 ){ fprintf(stderr,"export_vtk_plasma: error closing file\n Aborting...\n"); exit(EXIT_FAILURE); }
 	
 		/* ... prepare the name of the next file...*/
 		if(i==last_file)
@@ -284,16 +280,14 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 		
 
 	
-	//double fact = factor * (1.0/(double)samples);
 	
 	for(i=0; i<num_cells; i++)
 	{
 		assert( samples[i]>=0 );
 		if( samples[i]!=0 ){
-			fprintf(fp, "%lf\n", average[i]/(double)samples[i] );
-		}else{
-			fprintf(stderr,"SAM_average: One or more cells are empty throughout the sample. Do the average over more samples.\n Aborting...\n");
-			exit(EXIT_FAILURE);
+			fprintf(fp, "%d \t %lf\n", samples[i], average[i]/(double)samples[i] );
+		}else{ //cells that are empty (e.g. external cells) should NOT get 0, they ca get nan, or just an empty space
+			fprintf(fp, "0 \t \n" );
 		}
 	}
 		
@@ -301,11 +295,7 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 	free(average);
 	free(samples);
 	flag = fclose(fp);
-	if( flag !=0 )
-	{
-		fprintf(stderr,"export_vtk_plasma: error closing file\n Aborting...\n");
-		exit(EXIT_FAILURE);
-	}
+	if( flag !=0 ){ fprintf(stderr,"export_vtk_plasma: error closing file\n Aborting...\n"); exit(EXIT_FAILURE); }
 		
 	return; /* back to main */
 }
