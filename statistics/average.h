@@ -306,27 +306,33 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 /////////////////////////////////////////////////////////////////////////////
 /// Transforms a CAM file filename into a SAM file
 /// filename - name of the CAM-formated file, without the .dat extension, to be converted into SAM format
+/// path - relative path where the file is located
 /////////////////////////////////////////////////////////////////////////////
-/* Tested */
-inline void CAM_to_SAM(char * filename)
+inline void CAM_to_SAM(char * path, char * filename)
 {	
 	int flag, i,j;
 
 	FILE * fp;
 	FILE * fp_out;
 
-	char filename1[50]="";
-	strcpy(filename1,filename);
-	strcat(filename1,"_SAMconverted.dat");	
+	char input_file[50]="";
+	strcpy(input_file,path);
+	strcat(input_file,filename);
+	strcat(input_file,".dat");
 	
-	char filename2[50]="";
-	strcpy(filename2,filename);
-	strcat(filename2,".dat");
-	fp = fopen(filename2,"r");
+	char output_file[50]="";
+	strcpy(output_file,path);
+	
+	char tag[50]="SAMconverted_";
+	strcat(tag,filename);
+	strcat(tag,".dat");
+	strcat(output_file,tag);
+	
+	
+	fp = fopen(input_file,"r");
 	if( fp==NULL ){printf("CAM_to_SAM: Error opening file. Aborting...\n");exit(EXIT_FAILURE);}
 	
-
-	fp_out = fopen(filename1,"w");
+	fp_out = fopen(output_file,"w");
 	if( fp_out == NULL ){printf("CAM_to_SAM: error opening file. Aborting...\n"); exit(EXIT_FAILURE);}
 	
 	/* Read header from input file and parse to output file */

@@ -11,7 +11,7 @@
 /*		MAIN		 */
 /*-------------------------------*/
 
-/* call with arguments: filename (first file index) (last file index) number */
+/* call with arguments: <average type> filename (first file index) (last file index) number */
 /* with number being 1 for velocities averages, 3.0 for temperature averages and 3*a^3 for pressure averages (perhaps, needs checking) */
 int main(int argc, char **argv) {
 
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
 	if(argc!=7)
 	{
 		printf("Wrong number of arguments. Call as:\n");
-		printf("./average <av.type> <filename> <first file index> <last file index> <factor> <verbose>\n<av.type>\tSAM or CAM\n<filename>\tdatafile basic name\n<first file index>\t Index of first file (inclusive)\n<last file index>\t Index of last file (inclusive)\n<factor>\tcorrection factor\n<verbose>\tverbose mode 1/0\n");
+		printf("./average <av.type> <filename> <first file index> <last file index> <factor> <verbose>\n<av.type>\tSAM, CAM or CAM2SAM\n<filename>\tdatafile basic name\n<first file index>\t Index of first file (inclusive)\n<last file index>\t Index of last file (inclusive)\n<factor>\tcorrection factor\n<verbose>\tverbose mode 1/0\n");
 		printf("Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
@@ -54,8 +54,30 @@ int main(int argc, char **argv) {
 	}else if(strcmp(argv[1], "SAM")==0)
 	{
 		//printf("you chose SAM\n");
-		printf("Doing SAM average: Please make sure the data files used have NAN (math.h) values in empty collision cells. average.c does not check this. ");
+		//printf("Doing SAM average: Please make sure the data files used have NAN (math.h) values in empty collision cells. average.c does not check this. ");
 		SAM_average(filename, atoi(argv[3]), atoi(argv[4]), 1.0/number, atoi(argv[6]));
+	}else if(strcmp(argv[1], "CAM2SAM")==0)
+	{
+		printf("Converting CAM data files to SAM data format: no average is done. Factor value is not used.\n");
+		char filename_numbered[50]="";
+		char intaschar[20];
+		int i, first, last, verbose;
+		first = atoi(argv[3]);
+		last = atoi(argv[4]);
+		verbose = atoi(argv[6]);
+		
+		for(i=first; i<=last; i++)
+		{
+			strcpy(filename_numbered,argv[2]);		
+			sprintf(intaschar, "_%d", i);
+			strcat(filename_numbered,intaschar);
+						
+			CAM_to_SAM("./../DATA/", filename_numbered);
+			if(verbose)
+			{
+				printf("File %s.dat processed\n",filename_numbered);
+			}
+		}
 	}else{
 		printf("Type of average not recognized. Aborting...\n");
 		exit(EXIT_FAILURE);

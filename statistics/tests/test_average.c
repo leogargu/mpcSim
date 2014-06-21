@@ -30,8 +30,8 @@ int main(int argc, char **argv) {
 	
 	CAM_average("./CAM1/testCAM1", 0, 2, 1.0, 0);
 
-	CAM_to_SAM("./CAMtoSAM/testCAM1");
-	CAM_to_SAM("./CAMtoSAM/testCAM2");
+	CAM_to_SAM("./CAMtoSAM/", "testCAM1");
+	CAM_to_SAM("./CAMtoSAM/", "testCAM2");
 
 
 	return 0;
