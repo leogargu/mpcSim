@@ -43,7 +43,7 @@ nz=int(dimensions[2])
 #get data for the slice to be plotted
 #data=np.genfromtxt(input_file,skip_header=1,delimiter='\t',usecols=(0,1))
 
-data = pd.read_table('data',sep='\t',lineterminator='\n',skiprows=1,header=None)
+data = pd.read_table(input_file,sep='\t',skiprows=1,header=None)
 print data
 
 #averages=data[:,1]
