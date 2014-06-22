@@ -2,7 +2,7 @@
 # >> ./average CAM velprof <first file index> <last file index> 1.0 <verbose>
 #
 # Then, run this from the /python directory with:
-# >> python velprofile.py <Name of file in DATA directory> <Name of output plot (without the extension)>
+# >> python velprofile.py <Name of file in DATA directory, with extension> <Name of output plot (without the extension)>
 # If the name for the output plot is omitted, the result is saved as "output.png"
 #
 # This generates an image, velprofile.png, of the cross-sectional velocity profile, for example.
@@ -23,7 +23,7 @@ if sys.argv[1]!='':
 		outputname="output.png"
 		print "Saving plot in output.png\n"
 else:
-	print "Call as: python test.py <name of av file to plot> <name of output plot,without the extension>"
+	print "Call as: python slice.py <name of av file to plot> <name of output plot,without the extension>"
 	sys.exit(1)
 	
 header=fh.readline()
