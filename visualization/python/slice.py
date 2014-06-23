@@ -45,7 +45,7 @@ data=data.reshape(ny,nz)
 
 
 #plot
-im=plt.imshow(data,interpolation='bicubic')#or bilinear, nearest, bicubic
+im=plt.imshow(data,vmin=0,vmax=6,interpolation='nearest')#or bilinear, nearest, bicubic
 plt.colorbar(im, orientation='vertical')
 
 # Save it to disk
