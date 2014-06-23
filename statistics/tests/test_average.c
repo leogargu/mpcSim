@@ -27,6 +27,7 @@ int main(int argc, char **argv) {
 	SAM_average("./SAM1/testSAM1", 0, 2, 1.0, 0);
 	SAM_average("./SAM2/testSAM2", 0, 2, 1.0, 0);
 	SAM_average("./SAM3/testSAM3", 0, 2, 1.0, 0);
+	SAM_average("./SAM4/testSAM4", 0, 2, 1.0, 0);
 	
 	CAM_average("./CAM1/testCAM1", 0, 2, 1.0, 0);
 
