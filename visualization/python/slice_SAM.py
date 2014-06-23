@@ -70,7 +70,7 @@ plt.savefig("./"+outputname_samples)#how to save eps?
 
 #plot averages
 plt.figure(2)
-im_averages=plt.imshow(averages,interpolation='bicubic')#or bilinear, nearest, bicubic
+im_averages=plt.imshow(averages, vmin=0,vmax=6,interpolation='nearest')#or bilinear, nearest, bicubic
 plt.colorbar(im_averages,orientation='vertical')
 
 #save averages plot to disk
