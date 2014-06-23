@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -V
-#PBS -l nodes=1:ppn=1,pvmem=100mb,walltime=00:20:00
-#PBS -q devel
+#PBS -l nodes=1:ppn=1,pvmem=100mb,walltime=02:00:00
+#PBS -q serial
 #PBS -e ./logs
 #PBS -o ./logs
 
@@ -11,6 +11,6 @@ cd $PBS_O_WORKDIR
 # Execute a.out
 ./mpcSim input.dat
 
-#NOte: max mem per core in MInerva:2012MB, max cores per node:12
+#NOTE: max mem per core in MInerva:2012MB, max cores per node:12
 #Limit per user: 576 cores, 48 hours runtime, 1158912MB of memory
 #To check what happened to a finished job, run: >>checkjob JOBID -v

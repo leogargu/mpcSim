@@ -34,6 +34,9 @@ and accelerations of all particles. It also exports auxiliary vtk files: collisi
 /* Exports files to do CAM average over a x_slice, ready to plot the parabolic profile of POiseuille flow */
 #define EXPORT_VEL_PROFILE 1
 
+/* Defines how many timesteps to skip between exports. Set to 1 to export the vel profile at every timestep (with EXPORT_VEL_PROFILE 1).*/
+#define EXPORT_VEL_PROFILE_SKIP 1
+
 /* Checks, at every timestep, that the instantaneous density at any collision cell is less than DENSITY_TOLxInitial density */
 #define CHECK_COMPRESSIBILITY 0
 
@@ -53,7 +56,6 @@ at every timestep. Redo calculations using the script.pbs.oXXX file data, which 
 
 /* Turns the shift of the grid prior to each collision step on/off*/
 #define GALILEAN_SHIFT 1
-
 
 
 /* This function checks whether a double is zero. This function is not necessary and its code can be changed

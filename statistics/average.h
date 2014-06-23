@@ -155,7 +155,7 @@ inline void CAM_average(char * filename, int first_file, int last_file, double f
 
 
 ////////////////////////////////////////////////////////////////////////////////////////
-/// This function returns the Sample Average of a SCALAR over a number of files of the form: filename_num.dat, with num from fist_file to last_file.
+/// This function returns the Sample Average of a **SCALAR** over a number of files of the form: filename_num.dat, with num from fist_file to last_file.
 ///This function takes a different type of files compared to CAM_average. The first line is a header (same as CAM_average), but the line afterwards contains the values of the quantity to be averaged at every cell, in succession. I.e.
 ///   header
 ///   value_for_cell_start \t value_for_cell_start+1 \t ...
@@ -166,8 +166,6 @@ inline void CAM_average(char * filename, int first_file, int last_file, double f
 /// WARNING: This function does not check that all the files correspond to the same simulation, or whether they are "averageable" or not
 /// verbose: 0 for running silently, 1 for printing on screen the file being processed
 ////////////////////////////////////////////////////////////////////////////////////////
-// Still one big problem, what to do with exterior cells?
-//AQUI
 inline void SAM_average(char * filename, int first_file, int last_file, double factor, int verbose )
 {
 	int flag;
@@ -286,7 +284,7 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 		assert( samples[i]>=0 );
 		if( samples[i]!=0 ){
 			fprintf(fp, "%d \t %lf\n", samples[i], average[i]/(double)samples[i] );
-		}else{ //cells that are empty (e.g. external cells) should NOT get 0, they ca get nan, or just an empty space
+		}else{ //cells that are empty (e.g. external cells) should ideally get an empty space or NAN. genfromtxt needs the second column to have some value, so 0 would be needed here if not using pandas for visualization
 			fprintf(fp, "0 \t \n" );
 		}
 	}

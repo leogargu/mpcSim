@@ -1,10 +1,10 @@
 a	1.0	
-Lx	70.0	
+Lx	50.0	
 L	10.0		
-n_part	70000  	
+n_part	50000  	
 T	1.0  		
 m	1.0 		
 dt	0.05		
 g	1		
-steps	1000	
-equilibration_time	500 
+steps	1500	
+equilibration_time	0 
