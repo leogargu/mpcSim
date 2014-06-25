@@ -1,7 +1,7 @@
 /** MPC simulations.
  *
- * Author: Leonor Garcia-Gutierrez, 2013
- * Version: mpcSim-1.0
+ * Author: Leonor Garcia-Gutierrez, 2014
+ *
  *
  *
  * METHODS:
