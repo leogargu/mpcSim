@@ -44,25 +44,28 @@ nz=int(dimensions[2])
 #get data for the slice to be plotted, save in pandas dataframe
 data_sam = pd.read_table(input_file_sam,sep='\t',skiprows=1,skipinitialspace=True,header=None)
 data_cam = pd.read_table(input_file_cam,sep='\t',skiprows=1,skipinitialspace=True,header=None)
+
 #separate columns
 averages_sam=data_sam.values[:,1]
 averages_cam=data_cam.values[:,0]
 
-print averages_cam
-print averages_sam
+#calculate difference
+difference=np.subtract(averages_sam,averages_cam)
+
+print difference
 
 
-#prepare data for plotting - do sustraction first
-#averages_sam=averages_sam.reshape(ny,nz)
-#averages_cam=averages_cam.reshape(ny,nz)
+#prepare data for plotting
+difference=difference.reshape(ny,nz)
 
 
-#plot averages
-#im_averages=plt.imshow(averages,interpolation='bicubic')#or bilinear, nearest, bicubic
-#plt.colorbar(im_averages,orientation='vertical')
+
+#plot difference
+im_difference=plt.imshow(difference,interpolation='bicubic')#or bilinear, nearest, bicubic
+plt.colorbar(im_averages,orientation='vertical')
 
 #save averages plot to disk
-#plt.savefig("./"+outputname)#how to save eps?
+plt.savefig("./"+outputname)#how to save eps?
 
 
 
