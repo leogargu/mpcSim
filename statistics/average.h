@@ -29,7 +29,8 @@
 /// e.g. 1/3 for temperature, 1.0 for velocity, 1/3a^3 for pressure (possibly, double check this) 
 /// WARNING: This function does not check that all the files correspond to the same simulation, or whether they are "averageable" or not
 /// verbose: 0 for running silently, 1 for printing on screen the file being processed
-/// The output file has one column:it contains the actual value of the average, and it is empty is the corresponding cell was empty across the samples used to calculate the average.
+/// The output file has two columns: the first column contains the number of particles, over all the samples used, used in the average.
+/// The second column has the actual value of the average, and it is empty is the corresponding cell was empty across the samples used to calculate the average.
 ////////////////////////////////////////////////////////////////////////////////////////
 inline void CAM_average(char * filename, int first_file, int last_file, double factor, int verbose )
 {
@@ -130,15 +131,14 @@ inline void CAM_average(char * filename, int first_file, int last_file, double f
 	fprintf( fp, "%d \t %d \t %d \t %d \t %d \n", nx, ny, nz, cell_idx_start, cell_idx_end);
 	for(i=0;i<num_cells;i++)
 	{
+		fprintf(fp, "%d \t ",part_num[i]);
 		if( part_num[i]!=0)
 		{
 			average[i] = factor * (average[i]/(double)part_num[i]) ;
 			fprintf(fp,"%lf\n", average[i]);
 		}else{
 			fprintf(fp,"\n");
-			//average[i] = 0.0; // no particles in this collision cell, in any of the samples
 		}
-		//fprintf(fp,"%lf\n", average[i]);
 	}
 		
 	/* Clean up */

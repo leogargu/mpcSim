@@ -1,7 +1,7 @@
-# This script calculates SAM average - CAM average and plots it in the same way that eaither average is plotted
+# This script calculates (SAM average - CAM average) and plots it in the same way that either average is plotted
 #
-# Run this from the /python directory with:
-# >> python slice_compare.py <Name of SAM averaged file in DATA directory, with extension> <Name of SAM averaged file in DATA directory, with extension> <(optional) name of output image, without extension>
+# Run this from the python directory with:
+# >> python slice_compare.py <Name of SAM averaged file in /experiments directory, with extension> <Name of SAM averaged file in /experiments directory, with extension> <(optional) name of output image, without extension>
 # If the name for the output plot is omitted, the result is saved as "output_compare.png"
 #
 
@@ -14,7 +14,7 @@ import numpy as np
 import sys
 
 ################################################################################################
-#This function is by Paul H, modified by TheChymera and comes from here:
+#This function is by Paul H, modified by TheChymera (Horea Christian) and comes from here:
 #http://stackoverflow.com/questions/7404116/defining-the-midpoint-of-a-colormap-in-matplotlib
 #https://github.com/TheChymera/chr-helpers/blob/d05eec9e42ab8c91ceb4b4dcc9405d38b7aed675/chr_matplotlib.py
 ################################################################################################
@@ -26,6 +26,8 @@ def shiftedColorMap(cmap, start=0, midpoint=0.5, stop=1.0, name='shiftedcmap'):
     data with a negative min and positive max and you want the
     middle of the colormap's dynamic range to be at zero
 
+    # Note(Leonor): I don't think the stop/start offset are right. I have contacted the author (26/06/2014), 
+      will go with my version in the implementation below.
     Input
     -----
     cmap : The matplotlib colormap to be altered
@@ -75,25 +77,34 @@ def shiftedColorMap(cmap, start=0, midpoint=0.5, stop=1.0, name='shiftedcmap'):
     
 ################################################################################################
         
-    
+   
+# check number of calling arguments
+if len(sys.argv)<3:
+	print "call as: \n>>python slice_compare.py <full path and name of SAM file in /experiments> <full path and name of CAM file in /experiments> <(optional) name output file, without extension>\n"
+	sys.exit(1)
+	
+	
+#define input and output directory
+input_dir = './../../experiments/'
+output_dir = input_dir
 
 
 #get header
 if sys.argv[1]!='':
 	
-	input_file_sam='./../../DATA/'+sys.argv[1];
-	input_file_cam='./../../DATA/'+sys.argv[2];
+	input_file_sam = input_dir + sys.argv[1];
+	input_file_cam = input_dir + sys.argv[2];
 	
 	fh_sam=open(input_file_sam,'r')
-	#fh_cam=open(input_file_cam,'r')
+	#fh_cam=open(input_file_cam,'r') # currently the script does not check that the sam and cam data have been obtained from the same raw datafiles.
 	
 	if len(sys.argv)==4:
 		outputname=sys.argv[3]+".png"
-		print "I will save plots as " + outputname + ", cam_" + outputname + ", and sam_" + outputname +"\n"
+		print "Plots will be saved as " + outputname + ", cam_" + outputname + ", and sam_" + outputname +"\n"
 
 	else:
 		outputname="output_compare.png"
-		print "I will save plots as output_compare.png, cam_output_compare.png and sam_output_compare.png\n"
+		print "Plots will be saved as output_compare.png, cam_output_compare.png and sam_output_compare.png\n"
 else:
 	print "Call as: python slice_compare.py <name of SAM av file> <name of CAM av file> <name of output plot, without the extension>"
 	sys.exit(1)
@@ -111,12 +122,12 @@ nz=int(dimensions[2])
 
 #get data for the slice to be plotted, save in pandas dataframe
 data_sam = pd.read_table(input_file_sam,sep='\t',skiprows=1,skipinitialspace=True,header=None)
-data_cam = pd.read_table(input_file_cam,skipinitialspace=True,header=None) #if header is skipped, there is only one column that starts with an empty row: read_table doesn't know how to parse this.
+data_cam = pd.read_table(input_file_cam,sep='\t',skiprows=1,skipinitialspace=True,header=None) #if header is skipped, there is only one column that starts with an empty row: read_table doesn't know how to parse this.
 
 #separate columns
-data_cam_clean=data_cam.values[:,0]
-averages_cam=np.delete(data_cam_clean,0)
-averages_sam=data_sam.values[:,1]
+averages_sam = data_sam.values[:,1]
+averages_cam = data_cam.values[:,1]
+
 
 my_vmin=np.nanmin(averages_sam)
 if np.nanmin(averages_cam) < my_vmin:
@@ -124,7 +135,6 @@ if np.nanmin(averages_cam) < my_vmin:
 my_vmax=np.nanmax(averages_sam)
 if np.nanmax(averages_cam) > my_vmax:
 	my_vmax = np.nanmax(averages_cam)	
-
 
 #calculate difference
 difference=np.subtract(averages_sam,averages_cam)
@@ -143,41 +153,50 @@ averages_sam = averages_sam.reshape(ny,nz)
 #plot difference
 mycmap_midpoint = abs(v_min)/(v_max+abs(v_min))
 
-if data_mean<0:
-	mycmap_start=0.0
+#Calculate offsets
+if abs(v_min) >= v_max:
+	mycmap_start = 0.0
+	mycmap_stop = 0.5*( abs(v_min) + v_max ) / abs(v_min)
 else:
-	mycmap_start=0.5*(v_max-abs(v_min))/v_max
+	mycmap_start = 0.5*( v_max-abs(v_min) ) / v_max
+	mycmap_stop = 1.0
 	
-if data_mean >0:
-	mycmap_stop=1.0
+#Check health and generate color map
+if v_min >=0 or v_max <=0:
+	print "difference data min ", v_min, ", max ", v_max,"\n" 
+	print "ColorMap will *NOT* be shifted.\n" #see shiftedColorMap comments above, it doesn't work if vmin is not negative and vmax positive
+	my_cmap = plt.get_cmap('seismic')
 else:
-	mycmap_stop=0.5*(abs(v_min)-v_max)/abs(v_min)
+	print mycmap_start, mycmap_midpoint, mycmap_stop
 	
-assert mycmap_start<mycmap_midpoint
-assert mycmap_midpoint<mycmap_stop
-assert 0.5<=mycmap_stop<=1.0
-assert 0.0<=mycmap_start<=0.5
+	assert mycmap_start < mycmap_midpoint
+	assert mycmap_midpoint < mycmap_stop
+	assert 0.5 <= mycmap_stop <= 1.0
+	assert 0.0 <= mycmap_start <= 0.5
+	
+	orig_cmap = matplotlib.cm.seismic
+	shifted_cmap = shiftedColorMap(orig_cmap, midpoint=mycmap_midpoint, name='shifted')
+	shrunk_cmap = shiftedColorMap(orig_cmap, start=mycmap_start, midpoint=mycmap_midpoint, stop=mycmap_stop, name='shrunk')
+	my_cmap = shrunk_cmap
 
-orig_cmap = matplotlib.cm.seismic
-shifted_cmap = shiftedColorMap(orig_cmap, midpoint=mycmap_midpoint, name='shifted')
-shrunk_cmap = shiftedColorMap(orig_cmap, start=mycmap_start, midpoint=mycmap_midpoint, stop=mycmap_stop, name='shrunk')
 
-im_difference=plt.imshow(difference,cmap=shrunk_cmap,interpolation='bicubic')#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
+#plot with the custom colormap
+im_difference=plt.imshow(difference,cmap=my_cmap,interpolation='bicubic')#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
 plt.colorbar(im_difference,orientation='vertical')
 
 #save averages plot to disk
-plt.savefig("./"+outputname)#how to save eps?
+plt.savefig( output_dir + outputname )#how to save eps?
 
 #auxiliary plots
 plt.figure(2)
 im_sam=plt.imshow(averages_sam,vmin=my_vmin,vmax=my_vmax,interpolation='bicubic')#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
 plt.colorbar(im_sam,orientation='vertical')
-plt.savefig("./sam_"+outputname)#how to save eps?
+plt.savefig( output_dir + "sam_" + outputname )#how to save eps?
 
 plt.figure(3)
 im_cam=plt.imshow(averages_cam,vmin=my_vmin,vmax=my_vmax,interpolation='bicubic')#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
 plt.colorbar(im_cam,orientation='vertical')
-plt.savefig("./cam_"+outputname)#how to save eps?
+plt.savefig(output_dir + "cam_" + outputname )#how to save eps?
 
 
 #how to add axis labels?

@@ -39,8 +39,10 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 	
-	
-	char filename[50]="./../DATA/";
+	char directory_name[70]="./../experiments/";
+	//char filename[50]="./../experiments/";
+	char filename[70]="";
+	strcpy(filename,directory_name);
 	strcat(filename,argv[2]);
 	
 	double number;
@@ -72,7 +74,7 @@ int main(int argc, char **argv) {
 			sprintf(intaschar, "_%d", i);
 			strcat(filename_numbered,intaschar);
 						
-			CAM_to_SAM("./../DATA/", filename_numbered);
+			CAM_to_SAM(directory_name, filename_numbered);
 			if(verbose)
 			{
 				printf("File %s.dat processed\n",filename_numbered);

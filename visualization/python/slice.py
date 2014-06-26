@@ -14,9 +14,13 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import sys
 
+#define input and output directory
+input_dir = './../../experiments/'
+output_dir = input_dir
+
 #get header
 if sys.argv[1]!='':
-	fh=open('./../../DATA/'+sys.argv[1],'r')
+	fh=open( input_dir + sys.argv[1],'r')
 	if len(sys.argv)==3:
 		outputname=sys.argv[2]+".png"
 	else:
@@ -37,7 +41,7 @@ nz=int(dimensions[2])
 
 
 #get data for the slice to be plotted
-data=np.genfromtxt('./../../DATA/'+sys.argv[1],skip_header=1,delimiter='\n')
+data=np.genfromtxt(input_dir + sys.argv[1], skip_header=1, delimiter='\n')
 
 
 #prepare data for plotting
@@ -49,7 +53,7 @@ im=plt.imshow(data,vmin=0,vmax=6,interpolation='nearest')#or bilinear, nearest, 
 plt.colorbar(im, orientation='vertical')
 
 # Save it to disk
-plt.savefig("./"+outputname)#how to save eps?
+plt.savefig(output_dir + outputname)#how to save eps?
 
 #how to add axis labels?
 
