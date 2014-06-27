@@ -128,7 +128,8 @@ inline void CAM_average(char * filename, int first_file, int last_file, double f
 	
 	fopen(filename1,"w");
 	
-	fprintf( fp, "%d \t %d \t %d \t %d \t %d \n", nx, ny, nz, cell_idx_start, cell_idx_end);
+	/* Export expanded header */
+	fprintf( fp, "%d \t %d \t %d \t %d \t %d \t %d \t %d \n", nx, ny, nz, cell_idx_start, cell_idx_end, first_file, last_file);
 	for(i=0;i<num_cells;i++)
 	{
 		fprintf(fp, "%d \t ",part_num[i]);
@@ -277,11 +278,10 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 	strcat(filename1,"_SAM_averaged.dat");
 	fopen(filename1,"w");
 	
-	fprintf( fp, "%d \t %d \t %d \t %d \t %d \n", nx, ny, nz, cell_idx_start, cell_idx_end);
+	/* Export extended header */
+	fprintf( fp, "%d \t %d \t %d \t %d \t %d \t %d \t %d\n", nx, ny, nz, cell_idx_start, cell_idx_end, first_file, last_file);
 		
 
-	
-	
 	for(i=0; i<num_cells; i++)
 	{
 		assert( samples[i]>=0 );

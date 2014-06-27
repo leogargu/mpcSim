@@ -7,16 +7,20 @@
 # This generates an image, velprofile.png, of the cross-sectional velocity profile, for example.
 
 
+#NOT TESTED after changing directories
+
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 #from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import sys
 
-
+#define input and output directory
+input_dir = './../../experiments/'
+output_dir = input_dir
 
 #get data for the slice to be plotted
-data=np.genfromtxt('./../../DATA/equilibration.dat',delimiter='\t')
+data=np.genfromtxt(input_dir+'equilibration.dat',delimiter='\t')
 
 #plot momentum
 plt.plot(data)
@@ -27,7 +31,7 @@ plt.title("Equilibration phase")
 
 
 # Save it to disk
-plt.savefig("./momentum.png") #how to save eps?
+plt.savefig(output_dir+"momentum.png") #how to save eps?
 
 #add functionality to plot kinetic energy of the system  here
 

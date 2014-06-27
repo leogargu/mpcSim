@@ -8,10 +8,14 @@
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-from mpl_toolkits.mplot3d import Axes3D
+#import matplotlib.image as mpimg
+#from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import sys
+from matplotlib.backends.backend_pdf import PdfPages
+#On PdfPages:
+#http://stream.princeton.edu/AWCM/LIBRARIES/matplotlib-1.3.0/lib/matplotlib/backends/backend_pdf.py
+
 
 ################################################################################################
 #This function is by Paul H, modified by TheChymera (Horea Christian) and comes from here:
@@ -99,7 +103,7 @@ if sys.argv[1]!='':
 	#fh_cam=open(input_file_cam,'r') # currently the script does not check that the sam and cam data have been obtained from the same raw datafiles.
 	
 	if len(sys.argv)==4:
-		outputname=sys.argv[3]+".png"
+		outputname=sys.argv[3]+".pdf" #change format if needed
 		print "Plots will be saved as " + outputname + ", cam_" + outputname + ", and sam_" + outputname +"\n"
 
 	else:
@@ -115,10 +119,14 @@ fh_sam.close()
 #sanity check: compare both headers/assert
 
 # process dimensions of simulation box 
-dimensions=header.split('\t')[:3]
+dimensions=header.split()
 nx=int(dimensions[0])
 ny=int(dimensions[1])
 nz=int(dimensions[2])
+idx_first_cell = int(dimensions[3])
+idx_last_cell = int(dimensions[4])
+first_file = int(dimensions[5])
+last_file = int(dimensions[6])
 
 #get data for the slice to be plotted, save in pandas dataframe
 data_sam = pd.read_table(input_file_sam,sep='\t',skiprows=1,skipinitialspace=True,header=None)
@@ -179,27 +187,65 @@ else:
 	shrunk_cmap = shiftedColorMap(orig_cmap, start=mycmap_start, midpoint=mycmap_midpoint, stop=mycmap_stop, name='shrunk')
 	my_cmap = shrunk_cmap
 
-
+##########################################
 #plot with the custom colormap
 im_difference=plt.imshow(difference,cmap=my_cmap,interpolation='bicubic')#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
 plt.colorbar(im_difference,orientation='vertical')
 
 #save averages plot to disk
-plt.savefig( output_dir + outputname )#how to save eps?
+pdffig = PdfPages( output_dir + outputname )
+plt.savefig( pdffig, format="pdf")
 
+#add metadata to figure
+metadata = pdffig.infodict()
+metadata['Title'] = 'Data plotted (2nd column) = difference ' + input_file_sam+' [MINUS] '+input_file_cam
+metadata['Author'] = 'Script used to plot this = slice_compare.py'
+metadata['Subject']= 'Info on CAM and SAM avgs plotted in cam_'+outputname+' and sam_'+outputname
+metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file)
+#metadata['Creator'] = 
+#metadata['Producer']=
+pdffig.close()
+
+##########################################
 #auxiliary plots
 plt.figure(2)
 im_sam=plt.imshow(averages_sam,vmin=my_vmin,vmax=my_vmax,interpolation='bicubic')#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
 plt.colorbar(im_sam,orientation='vertical')
-plt.savefig( output_dir + "sam_" + outputname )#how to save eps?
 
+pdffig_sam = PdfPages( output_dir + "sam_" + outputname )
+
+plt.savefig( pdffig_sam, format="pdf" )
+
+#add metadata to figure
+metadata = pdffig_sam.infodict()
+metadata['Title'] = 'Data plotted (2nd column) =' + input_file_sam
+metadata['Author'] = 'Script used to plot this = slice_compare.py'
+metadata['Subject']= 'Info on corresponding CAM avg plotted in cam_'+outputname+', difference in '+ outputname
+metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file)
+#metadata['Creator'] = 
+#metadata['Producer']=
+pdffig_sam.close()
+
+
+#========================================
 plt.figure(3)
 im_cam=plt.imshow(averages_cam,vmin=my_vmin,vmax=my_vmax,interpolation='bicubic')#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
 plt.colorbar(im_cam,orientation='vertical')
-plt.savefig(output_dir + "cam_" + outputname )#how to save eps?
 
+pdffig_cam = PdfPages( output_dir + "cam_" + outputname )
 
-#how to add axis labels?
+plt.savefig( pdffig_cam , format="pdf")
+
+#add metadata to figure
+metadata = pdffig_cam.infodict()
+metadata['Title'] = 'Data plotted (2nd column) =' + input_file_cam
+metadata['Author'] = 'Script used to plot this = slice_compare.py'
+metadata['Subject']= 'Info on corresponding SAM avg plotted in sam_'+outputname+', difference in '+ outputname
+metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file)
+#metadata['Creator'] = 
+#metadata['Producer']=
+pdffig_cam.close()
+
 
 #--------------------
 #plot 3d wireframe
