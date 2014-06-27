@@ -1,10 +1,7 @@
-# Before running this script, calculate velprof_CAM_averaged.dat by running this from /statistics:
-# >> ./average CAM velprof <first file index> <last file index> 1.0 <verbose>
+# Run this from the /python directory with:
+# >> python equilibration.py 
 #
-# Then, run this from the /python directory with:
-# >> python velprofile.py "Name of file in DATA directory"
-#
-# This generates an image, velprofile.png, of the cross-sectional velocity profile, for example.
+# This generates an image, momentum.png, of the evolution of total mmentum at each timestep in the simulation
 
 
 #NOT TESTED after changing directories

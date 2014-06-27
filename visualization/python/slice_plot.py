@@ -62,6 +62,8 @@ data = pd.read_table(input_file,sep='\t',skiprows=1,skipinitialspace=True,header
 averages=data.values[:,1]
 samples=data.values[:,0]
 
+data_min = np.nanmin(averages)
+data_max = np.nanmax(averages)
 
 #in here, find the max and min of samples, and print to screen
 print "Maximum number of samples(SAM)/particles(CAM) used: ", int(max(samples))
@@ -75,6 +77,8 @@ averages=averages.reshape(ny,nz)
 ##########################################
 
 #plot samples statistics
+samples[samples==0] = np.nan
+
 im_samples=plt.imshow(samples,interpolation='nearest')
 plt.colorbar(im_samples, orientation='vertical')
 
@@ -97,7 +101,7 @@ pdffig_samples.close()
 
 #plot averages
 plt.figure(2)
-im_averages=plt.imshow(averages, vmin=0,vmax=6,interpolation='nearest')#or bilinear, nearest, bicubic
+im_averages=plt.imshow(averages, vmin=data_min,vmax=data_max,interpolation='bicubic')#or bilinear, nearest, bicubic
 plt.colorbar(im_averages,orientation='vertical')
 
 #save averages plot to disk, prepare metadata object first

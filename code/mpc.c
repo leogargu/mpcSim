@@ -126,7 +126,7 @@ inline void export_vtk_plasma(int id, double ** pos, double ** vel,double ** acc
 	FILE * fp;
 	char pos_name[30];
 	//snprintf(pos_name,sizeof(char)*30,"plasma%04d.vtk",id); //leading zeroes: not pvpython-friendly
-	snprintf(pos_name,sizeof(char)*30,"./../DATA/plasma%d.vtk",id);
+	snprintf(pos_name,sizeof(char)*30,"./../experiments/plasma%d.vtk",id);
 
 	fp=fopen(pos_name,"w");
 	
@@ -193,10 +193,10 @@ inline void export_vtk_grid(Geometry cylinder)
 {
 	int flag;
 	FILE * fp;
-	fp = fopen("./../DATA/collision_grid.vtk","w");
+	fp = fopen("./../experiments/collision_grid.vtk","w");
 	if( fp == NULL )
 	{
-		printf("export_vtk_grid: Error opening ./../DATA/collision_grid.vtk. Check directory exists. Aborting...\n");
+		printf("export_vtk_grid: Error opening ./../experiments/collision_grid.vtk. Check directory exists. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
 	fprintf(fp,"# vtk DataFile Version 2.0\nGrid representation\nASCII \nDATASET STRUCTURED_POINTS\nDIMENSIONS %d %d %d\nORIGIN 0 0 0\nSPACING %.1lf %.1lf %.1lf",cylinder.n_cells_dim[0]+1,cylinder.n_cells_dim[1]+1,cylinder.n_cells_dim[2]+1,cylinder.a,cylinder.a,cylinder.a);
@@ -215,10 +215,10 @@ inline void export_vessel_geometry(Geometry cylinder, int num_steps)
 {
 	int flag;
 	FILE * fp;
-	fp = fopen("./../DATA/vessel_geometry.py","w");
+	fp = fopen("./../experiments/vessel_geometry.py","w");
 	if( fp == NULL )
 	{
-		printf("export_vessel_geometry: Error opening ./../DATA/vessel_geometry.vtk. Check directory exists. Aborting...\n");
+		printf("export_vessel_geometry: Error opening ./../experiments/vessel_geometry.vtk. Check directory exists. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
 	fprintf(fp,"# Cylinder data\n");
@@ -793,6 +793,12 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	/* Timestamp log file */
+	time_t now;
+	time(&now);
+	printf("Start: %s\n",ctime(&now));
+	
+	/* Echo parameter values to log file */
 	printf("----------------------------------------\n");
 	printf("Parameter \t Value\n");
 	printf("----------------------------------------\n");
@@ -813,6 +819,7 @@ int main(int argc, char **argv) {
 	printf("%-15s \t %.2lfx%.2lfx%.2lf\n","simulation box",Lx,L,L);
 	// export hydrodynamic numbers?
 		
+	/* Echo relevant macro values to log file*/
 	printf("----------------------------------------\n");
 	printf("Macro \t\t Value\n");
 	printf("----------------------------------------\n");
@@ -824,6 +831,7 @@ int main(int argc, char **argv) {
 	printf("%-15s \t %d \n","GALILEAN_SHIFT",GALILEAN_SHIFT);
 	printf("%-15s \t %d\n","MONITOR_EQUILIBRATION",MONITOR_EQUILIBRATION);
 	
+	/* Echo additional info to log file */
 	printf("----------------------------------------\n");
 	printf("Other information \n");
 	printf("----------------------------------------\n");
@@ -1041,7 +1049,7 @@ int main(int argc, char **argv) {
 	/*------------------------------------------------------------------*/
 	#if MONITOR_EQUILIBRATION
 		FILE * eq_fp;
-		eq_fp = fopen("./../DATA/equilibration.dat","w");
+		eq_fp = fopen("./../experiments/equilibration.dat","w");
 		if(eq_fp == NULL){printf("mpc.c: Error opening eq_fp file. Aborting...\n "); exit(EXIT_FAILURE);}
 	#endif
 	
@@ -1130,7 +1138,7 @@ int main(int argc, char **argv) {
 				encage(pos, null_shift, n_part, cylinder, c_p, 1, cell_occupation, max_oc);
 				slice_CAM_velocities(x_slice, cylinder, cell_occupation, vel, 1, slice_CAM_scalar); // only x-component of the velocities
 				update_data_header(cylinder, file_counter, x_slice, i, data_header);
-				export_CAM_data(1, slice_CAM_scalar, "./../DATA/velprof", data_header,0, slice_size-1);
+				export_CAM_data(1, slice_CAM_scalar, "./../experiments/velprof", data_header,0, slice_size-1);
 				file_counter++;
 				counter = equilibration_time;
 			}
@@ -1148,7 +1156,7 @@ int main(int argc, char **argv) {
 	
 
 	/*------------------------------------------------------------------*/
-	/*	FINISH BUSINESS with optional macros			    */
+	/*	FINISH BUSINESS						    */
 	/*------------------------------------------------------------------*/
 	
 	#if MONITOR_EQUILIBRATION
@@ -1156,6 +1164,8 @@ int main(int argc, char **argv) {
 		if(fclose_flag != 0){printf("mpc.c: Error closing eq_fp file. Aborting...\n "); exit(EXIT_FAILURE);}
 	#endif
 	
+	time(&now);
+	printf("Finish: %s\n",ctime(&now));
 	
 	/*------------------------------------------------------------------*/
 	/*	EXITING							    */

@@ -31,13 +31,13 @@ inline void export_SAM_data_scalar(double * data, char * filename, int * header,
 {
 	int i, flag;
 	FILE * fp;
-	char file_name[50];
-	char filename1[50]="";
+	char file_name[100];
+	char filename1[100]="";
 	
 	/* Assemble the file name */
 	strcpy(filename1,filename);
 	strcat(filename1,"_%d.dat");
-	snprintf(file_name,sizeof(char)*30,filename1,header[0]);
+	snprintf(file_name,sizeof(char)*120,filename1,header[0]);
 	
 	/* Prepare file pointer */
 	fp=fopen(file_name,"w");
@@ -100,11 +100,12 @@ inline void export_SAM_data_vector(double ** data, char * filename, int * header
 	FILE * fp;
 	
 	/* Prepare file name*/
-	char file_name[50];
-	char filename1[50]="";
+	char file_name[100];
+	char filename1[100]="";
 	strcpy(filename1,filename);
 	strcat(filename1,"_%d.dat");
-	snprintf(file_name,sizeof(char)*30,filename1,header[0]);
+	
+	snprintf( file_name, sizeof(char)*120, filename1, header[0] );
 	
 	/* Open file */
 	fp=fopen(file_name,"w");
@@ -165,11 +166,11 @@ inline void export_CAM_data(int is_scalar, double ** data, char * filename, int 
 	FILE * fp;
 	
 	/* Prepare file name*/
-	char file_name[50];
-	char filename1[50]="";
+	char file_name[100];
+	char filename1[100]="";
 	strcpy(filename1,filename);
 	strcat(filename1,"_%d.dat");
-	snprintf(file_name,sizeof(char)*30,filename1,header[0]);
+	snprintf(file_name,sizeof(char)*120,filename1,header[0]);
 	
 	int i,j,local_density, flag;
 	
