@@ -793,28 +793,45 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	printf("--------------------------------\n");
+	printf("----------------------------------------\n");
 	printf("Parameter \t Value\n");
-	printf("--------------------------------\n");
-	printf("density \t %.2lf\n",density);
-	printf("n_part \t\t %d\n",n_part);
-	printf("a \t\t %.3lf\n",a);
-	printf("n_cells \t %d\n",n_cells);
-	printf("Lx \t\t %.3lf\n",L);
-	printf("L \t\t %.3lf\n",Lx);
-	printf("radius \t\t %.3lf\n",radius);
-	printf("m \t\t %.3lf\n",m);
-	printf("T \t\t %.3lf\n",T);
-	printf("grid \t\t %.0lfx%.0lfx%.0lf \n",L/a,L/a,Lx/a);
-	printf("simulation box \t %.2lfx%.2lfx%.2lf\n",Lx,L,L);
-	printf("Mean free path \t %.2lf\n",dt * sqrt(T*m_inv));
-	printf("Kinetic viscosity /eta/ \t %.2lf\n", density * T * dt * ((density/(density-1+exp(-density)))-0.5)/(a*a*a) );
-	printf("Collision viscosity /eta/\t %.2lf\n", m * (density-1+exp(-density))/(12*a*dt));
-	printf("Total viscosity /eta/ \t\t %.2lf\n", density * T * dt * ((density/(density-1+exp(-density)))-0.5)/(a*a*a) + m * (density-1+exp(-density))/(12*a*dt));
-	printf("Knudsen number Kn=%.3lf\n",dt * sqrt(T*m_inv)/a); // Kn>>1 is free molecular regime, Kn<<1 is hydrodynamic regime, Kn around 1 is gas rarefaction
+	printf("----------------------------------------\n");
+	printf("%-15s \t %.4lf\n","density",density);
+	printf("%-15s \t %d\n","n_part",n_part);
+	printf("%-15s \t %.4lf\n","a",a);
+	printf("%-15s \t %d\n","n_cells",n_cells);
+	printf("%-15s \t %.4lf\n","Ly,Lz",L);
+	printf("%-15s \t %.4lf\n","Lx",Lx);
+	printf("%-15s \t %.4lf\n","radius",radius);
+	printf("%-15s \t %.4lf\n","m",m);
+	printf("%-15s \t %.4lf\n","T",T);
+	printf("%-15s \t %.4lf\n","dt",dt);
+	printf("%-15s \t %.4lf\n","g",g);
+	printf("%-15s \t %d\n","simulation steps",steps);
+	printf("%-15s \t %d\n","equilibration steps",equilibration_time);
+	printf("%-15s \t %.0lfx%.0lfx%.0lf \n","grid",L/a,L/a,Lx/a);
+	printf("%-15s \t %.2lfx%.2lfx%.2lf\n","simulation box",Lx,L,L);
 	// export hydrodynamic numbers?
+		
+	printf("----------------------------------------\n");
+	printf("Macro \t\t Value\n");
+	printf("----------------------------------------\n");
+	printf("%-15s \t %lf\n","EQN_EPS (not used)",EQN_EPS);
+	printf("%-15s \t %e\n","TIME_EPS",TIME_EPS);
+	printf("%-15s \t %d \n","CHECK_COMPRESSIBILITY",CHECK_COMPRESSIBILITY); //not fully funtional yet. TO DO
+	printf("%-15s \t %lf \n","DENSITY_TOL",DENSITY_TOL);
+	printf("%-15s \t %d \n","DENSITY_MAX",DENSITY_MAX);
+	printf("%-15s \t %d \n","GALILEAN_SHIFT",GALILEAN_SHIFT);
+	printf("%-15s \t %d\n","MONITOR_EQUILIBRATION",MONITOR_EQUILIBRATION);
 	
-	
+	printf("----------------------------------------\n");
+	printf("Other information \n");
+	printf("----------------------------------------\n");
+	printf("%-30s \t %.2lf\n","Mean free path",dt * sqrt(T*m_inv));
+	printf("%-30s \t %.2lf\n", "Kinetic viscosity /eta/",density * T * dt * ((density/(density-1+exp(-density)))-0.5)/(a*a*a) );
+	printf("%-30s \t %.2lf\n","Collision viscosity /eta/", m * (density-1+exp(-density))/(12*a*dt));
+	printf("%-30s \t %.2lf\n","Total viscosity /eta/ ", density * T * dt * ((density/(density-1+exp(-density)))-0.5)/(a*a*a) + m * (density-1+exp(-density))/(12*a*dt));
+	printf("%-30s \t %.3lf\n","Knudsen number (Kn)",dt * sqrt(T*m_inv)/a); // Kn>>1 is free molecular regime, Kn<<1 is hydrodynamic regime, Kn around 1 is gas rarefaction
 	
 	
 	/*------------------------------------------------------------------*/
@@ -835,8 +852,8 @@ int main(int argc, char **argv) {
 	//seed = 1380619236; //Report 1/10/13
 	gsl_rng_set(r , seed); //sets the seed for the RNG r
 	
-	printf("RNG seed \t %ld\n",seed);
-	
+	printf("%-30s \t %ld\n","RNG seed", seed);
+
 	
 	/*------------------------------------------------------------------*/
 	/*	MEMORY ALLOCATION AND INITIALIZATION OF ARRAYS		    */
@@ -867,8 +884,9 @@ int main(int argc, char **argv) {
 	int max_oc = (int)(DENSITY_MAX * density);
 	//(int)density + (int)(density * DENSITY_TOL); //rounding down
 	int slice_size = cylinder.n_cells_dim[1] * cylinder.n_cells_dim[2];
-	
-	printf("cell_occupancy storage limit: %d\n", max_oc);
+
+	printf("%-30s \t %d\n","cell_occupancy storage limit", max_oc);
+
 	//printf("Minimum cell occupancy: %d\n", (int)density-(int)(DENSITY_TOL*density));
 	printf("--------------------------------\n");
 	

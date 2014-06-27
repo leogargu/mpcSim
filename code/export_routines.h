@@ -26,6 +26,7 @@
 /// A better option would be a nan. Routines handling SAM-formatted data files should expect nan's and handle them appropriately.
 /// This method is "blind" to this issue. If nan's are present, it will print them to file.
 //////////////////////////////////////////////////////////////////////////
+// MODIFIED BUT NOT TESTED (with the new SAM format, it was tested with teh old one)!!!! TO DO
 inline void export_SAM_data_scalar(double * data, char * filename, int * header, int cell_start, int cell_end)
 {
 	int i, flag;
@@ -92,6 +93,7 @@ inline void export_SAM_data_scalar(double * data, char * filename, int * header,
 /// v1x \t v1y \t v1z \n
 /// ...
 //////////////////////////////////////////////////////////////////////////
+// NOT TESTED WITH NEW FORMAT
 inline void export_SAM_data_vector(double ** data, char * filename, int * header, int cell_start, int cell_end)
 {// Shame there's no overloading in C...
 	int i, flag;

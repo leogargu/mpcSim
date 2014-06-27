@@ -2,8 +2,8 @@
 #PBS -V
 #PBS -l nodes=1:ppn=1,pvmem=100mb,walltime=02:00:00
 #PBS -q serial
-#PBS -e ./logs
-#PBS -o ./logs
+#PBS -e ./elogs/
+#PBS -o ./../experiments/
 
 # Change into the directory where I typed "qsub"
 cd $PBS_O_WORKDIR

@@ -10,6 +10,7 @@
 #define BINARY_EXPORT 0
 #define DEBUGGING_QUARTIC_SOLVER 0   // put this in quartic_solver.h, or change back to DEBUGGING
 
+/* used in quartic_solver.h, only in the function solve_quartic, which is not used by stream (it relies of gsl entirely after testing) */
 #define EQN_EPS 1e-5
 /*  A NOTE ON MACHINE EPSILON VALUES:
 
