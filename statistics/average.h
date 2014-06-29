@@ -398,5 +398,63 @@ inline void CAM_to_SAM(char * path, char * filename)
 
 
 
+/////////////////////////////////////////////////////////////////////////////
+/// Finds cells that are symmetrically equivalent to the given cell in the cylinder slice. 
+/// All indices are relative to the slice.
+/// Input:
+/// ny - Number of cells in the y direction in the slice
+/// nz - Number of cells in the z direction in the slice
+/// cell_idx - reative index of the cell of interest. It must be in the first quadrant (upper right)
+/// Output:
+/// sym_cells - array (int, length 4) containng the relative indices of the cells in the slice that are 
+///             symmetrically equivalent to cell_idx, including cell_idx. The order is:
+///	  	lower right quadrant (0), upper right quadrant (1), lower left (2), upper left (3)
+/// 
+/// Rationale behind the algorithm:
+/// q1 = given cell index
+/// q0 = given cell index - twice the relative position respect to the start of the first quadrant, which is lambda=cell_idx%(nz/2), -1 to correct for indices starting at 0
+/// q2 = given cell index + twice the distance to midpoint (mu), -1 to correct for indices starting at 0
+/// q3 = q2 + the quantity that was substracted from q1 to get to q0
+/////////////////////////////////////////////////////////////////////////////
+inline void find_sym_cells( int ny, int nz, int cell_idx, int * sym_cells )
+{
+	/* Defensive programming */ //find a way to do this only once, not at every call?
+	if( ny%2!=0 || nz%2!=0 )
+	{
+		fprintf(stderr,"find_sym_cells: ny,nz need to be even numbers. Aborting..\n");
+		exit(EXIT_FAILURE);
+	}
+	
+	int nz_half = nz/2;
+	int alpha = 2*(cell_idx % nz_half) + 1;
+	int mu = ny*nz_half;
+
+	
+	sym_cells[0] = cell_idx - alpha;
+	sym_cells[1] = cell_idx;
+	sym_cells[2] = 2 * mu - cell_idx - 1; // q2=cell_idx+2*(mu-cell_idx)-1
+	sym_cells[3] = sym_cells[2] + alpha;	
+	
+	return;
+}
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+/// Finds cells that are symmetrically equivalent to the given cell in the cylinder slice. 
+/// All indices are relative to the slice.
+/// Input:
+/////////////////////////////////////////////////////////////////////////////
+inline void find_sym_cells( int ny, int nz, int cell_idx, int * sym_cells )
+{
+
+	return;
+}
+
+
+
 
 #endif /* header guard*/
