@@ -835,11 +835,11 @@ int main(int argc, char **argv) {
 	printf("----------------------------------------\n");
 	printf("Other information \n");
 	printf("----------------------------------------\n");
-	printf("%-30s \t %.2lf\n","Mean free path",dt * sqrt(T*m_inv));
-	printf("%-30s \t %.2lf\n", "Kinetic viscosity /eta/",density * T * dt * ((density/(density-1+exp(-density)))-0.5)/(a*a*a) );
-	printf("%-30s \t %.2lf\n","Collision viscosity /eta/", m * (density-1+exp(-density))/(12*a*dt));
-	printf("%-30s \t %.2lf\n","Total viscosity /eta/ ", density * T * dt * ((density/(density-1+exp(-density)))-0.5)/(a*a*a) + m * (density-1+exp(-density))/(12*a*dt));
-	printf("%-30s \t %.3lf\n","Knudsen number (Kn)",dt * sqrt(T*m_inv)/a); // Kn>>1 is free molecular regime, Kn<<1 is hydrodynamic regime, Kn around 1 is gas rarefaction
+	printf("%-30s \t %.4lf\n","Mean free path",dt * sqrt(T*m_inv));
+	printf("%-30s \t %.4lf\n", "Kinetic viscosity /eta/",density * T * dt * ((density/(density-1+exp(-density)))-0.5)/(a*a*a) );
+	printf("%-30s \t %.4lf\n","Collision viscosity /eta/", m * (density-1+exp(-density))/(12*a*dt));
+	printf("%-30s \t %.4lf\n","Total viscosity /eta/ ", density * T * dt * ((density/(density-1+exp(-density)))-0.5)/(a*a*a) + m * (density-1+exp(-density))/(12*a*dt));
+	printf("%-30s \t %.4lf\n","Knudsen number (Kn)",dt * sqrt(T*m_inv)/a); // Kn>>1 is free molecular regime, Kn<<1 is hydrodynamic regime, Kn around 1 is gas rarefaction
 	
 	
 	/*------------------------------------------------------------------*/

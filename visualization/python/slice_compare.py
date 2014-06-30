@@ -177,13 +177,19 @@ if v_min >=0 or v_max <=0:
 else:
 	print mycmap_start, mycmap_midpoint, mycmap_stop
 	
-	assert mycmap_start < mycmap_midpoint
-	assert mycmap_midpoint < mycmap_stop
-	assert 0.5 <= mycmap_stop <= 1.0
-	assert 0.0 <= mycmap_start <= 0.5
-	
 	orig_cmap = matplotlib.cm.seismic
-	shifted_cmap = shiftedColorMap(orig_cmap, midpoint=mycmap_midpoint, name='shifted')
+	if (mycmap_start>mycmap_midpoint) or (mycmap_midpoint > mycmap_stop) or (0.5 > mycmap_stop) or (mycmap_stop > 1.0) or (0.0 > mycmap_start) or (mycmap_start > 0.5):
+		print "Colormap will be shifted but not shrunk. (Please correct this script)\n"
+		shifted_cmap = shiftedColorMap(orig_cmap, midpoint=mycmap_midpoint, name='shifted')
+		myc_map = shifted_cmap
+		
+	#assert mycmap_start < mycmap_midpoint
+	#assert mycmap_midpoint < mycmap_stop
+	#assert 0.5 <= mycmap_stop <= 1.0
+	#assert 0.0 <= mycmap_start <= 0.5
+	
+	
+	#shifted_cmap = shiftedColorMap(orig_cmap, midpoint=mycmap_midpoint, name='shifted')
 	shrunk_cmap = shiftedColorMap(orig_cmap, start=mycmap_start, midpoint=mycmap_midpoint, stop=mycmap_stop, name='shrunk')
 	my_cmap = shrunk_cmap
 

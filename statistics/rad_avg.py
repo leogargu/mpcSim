@@ -152,8 +152,8 @@ def find_weights(a,L,ny,nz,radius):
 ##############################################
 
 # check number of calling arguments
-if len(sys.argv)<5:
-	print "call as: \n>>python rad_avg.py <full path and name of data file in /experiments> <Value of a in the simulation> <Value of L in the simulation> <radius over which to perform the average>\n"
+if len(sys.argv)<6:
+	print "call as: \n>>python rad_avg.py <full path and name of data file in /experiments> <Value of a in the simulation> <Value of L in the simulation> <radius over which to perform the average><viscosity /mu/ >\n"
 	sys.exit(1)
 
 
@@ -166,6 +166,7 @@ input_file = sys.argv[1];
 a = float(sys.argv[2]);
 L = float(sys.argv[3]);
 radius = float(sys.argv[4]);
+viscosity=float(sys.arg[5]);
 
 #get header
 fh = open( input_dir + input_file,'r')
@@ -204,5 +205,31 @@ average_array=np.empty(ny*nz);
 average_array.fill(average); 
 diffSQ=np.square( np.subtract(np.nan_to_num(data.values[:,1]) , average_array) );
 print "Weighted std: ", ( V1 / (V1*V1-V2) )* np.dot(warray,diffSQ)
+
+
+
+
+################################################################
+#Merge me properly later - This is work in progress
+
+#generate average points:
+app_points = np.empty(10); 
+app_points.fill(0);
+
+R = (L-a)*0.5
+
+for i in range(0,11):
+	r = a + i*(R-3*a)*0.05
+	warray=find_weights(a,L,ny,nz,r)
+	assert (warray.sum()-1.0) <1e-6
+	average = np.average(np.nan_to_num(data.values[:,1]),weights=warray)
+	app_points[i]=average
+
+Vmax=np.nanmax(data.values[:,1])
+# plot several radial averages and compare with pot of videal=Vmax(1-(r/R)^2)
+
+x=np.linspace(-R-1,R+1)
+y=Vmax*(1-(x/R)*(x/R))
+plt.plot(x, )
 
 
