@@ -12,8 +12,6 @@
 
 import pandas as pd
 import matplotlib.pyplot as plt
-#import matplotlib.image as mpimg
-#from mpl_toolkits.mplot3d import Axes3D
 import pylab as pl
 import numpy as np
 import sys
@@ -24,6 +22,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 #define input and output directory
 input_dir = './../../experiments/'
 output_dir = input_dir
+
+# Define color of empty cells
+empty_color_stats='black'
+empty_color_avgs='white'
 
 #check health of input arguments and get header
 if len(sys.argv)>=2 and sys.argv[1]!='':
@@ -79,7 +81,11 @@ averages=averages.reshape(ny,nz)
 #plot samples statistics
 samples[samples==0] = np.nan
 
-im_samples=plt.imshow(samples,interpolation='nearest')
+my_cmap=plt.get_cmap('Greens') #Also interesting: jet, spectral, rainbow 
+masked_array = np.ma.array(samples, mask=np.isnan(samples))
+my_cmap.set_bad(color=empty_color_stats)
+
+im_samples=plt.imshow(samples,cmap=my_cmap,interpolation='nearest')
 plt.colorbar(im_samples, orientation='vertical')
 
 # Save sample statistics plot to disk
@@ -101,7 +107,11 @@ pdffig_samples.close()
 
 #plot averages
 plt.figure(2)
-im_averages=plt.imshow(averages, vmin=data_min,vmax=data_max,interpolation='bicubic')#or bilinear, nearest, bicubic
+my_cmap=plt.get_cmap('jet') #Also interesting: jet, spectral, rainbow 
+masked_array = np.ma.array(averages, mask=np.isnan(averages))
+my_cmap.set_bad(color=empty_color_avgs)
+
+im_averages=plt.imshow(averages,cmap=my_cmap,vmin=data_min,vmax=data_max,interpolation='bicubic')#or bilinear, nearest, bicubic
 plt.colorbar(im_averages,orientation='vertical')
 
 #save averages plot to disk, prepare metadata object first
