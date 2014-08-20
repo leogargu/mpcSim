@@ -32,7 +32,7 @@
 /// The output file has two columns: the first column contains the number of particles, over all the samples used, used in the average.
 /// The second column has the actual value of the average, and it is empty is the corresponding cell was empty across the samples used to calculate the average.
 ////////////////////////////////////////////////////////////////////////////////////////
-inline void CAM_average(char * filename, int first_file, int last_file, double factor, int verbose )
+inline void CAM_average(char * filename, int first_file, int last_file, int stride, double factor, int verbose )
 {
 	int flag;
 	/*Read header of first file to obtain geometry data */
@@ -77,10 +77,14 @@ inline void CAM_average(char * filename, int first_file, int last_file, double f
 	/* Read data from all files and start the average */
 	double row_length; // this is the occupation number for a given cell. It is stored as a double because the data file will be a 2D array of doubles, only the first element will be "special"
 	double aux;
-
+	int actual_last_file;
 	
-	for(i=first_file; i<=last_file; i++) //file 1 is open the first time that we pass through here	
+	//this loop should be a do-while instead
+	if(verbose){ printf("Processing file %s\n",filename1); }
+	for(i=first_file; i<=last_file; i=i+stride) //file 1 is open the first time that we pass through here	
 	{
+		actual_last_file = i;
+		
 		for(j=0;j<num_cells;j++)
 		{
 			fscanf(fp, "%lf", &row_length);
@@ -102,12 +106,12 @@ inline void CAM_average(char * filename, int first_file, int last_file, double f
 			exit(EXIT_FAILURE);
 		}
 		/* ... prepare the name of the next file...*/
-		if(i==last_file)
+		if(i+stride>last_file)
 		{
 			break; 
 		}
 		strcpy(filename1,filename);		
-		sprintf(intaschar, "_%d.dat", i+1);
+		sprintf(intaschar, "_%d.dat", i+stride);
 		strcat(filename1,intaschar);
 		
 		if( verbose ){	printf("Processing file %s\n",filename1); }
@@ -118,7 +122,7 @@ inline void CAM_average(char * filename, int first_file, int last_file, double f
 
 		/* read fist line to set the pointer in the right position. Checking of parameters for robustness is possible here */
 		fscanf( fp, "%d \t %d \t %d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &cell_idx_start, &cell_idx_end, &step);
-		
+				
 	}
 	
 	
@@ -129,11 +133,11 @@ inline void CAM_average(char * filename, int first_file, int last_file, double f
 	fopen(filename1,"w");
 	
 	/* Export expanded header */
-	fprintf( fp, "%d \t %d \t %d \t %d \t %d \t %d \t %d \n", nx, ny, nz, cell_idx_start, cell_idx_end, first_file, last_file);
+	fprintf( fp, "%d \t %d \t %d \t %d \t %d \t %d \t %d \t %d \n", nx, ny, nz, cell_idx_start, cell_idx_end, first_file, stride, actual_last_file);
 	for(i=0;i<num_cells;i++)
 	{
 		fprintf(fp, "%d \t ",part_num[i]);
-		if( part_num[i]!=0)
+		if( part_num[i]!=0 )
 		{
 			average[i] = factor * (average[i]/(double)part_num[i]) ;
 			fprintf(fp,"%lf\n", average[i]);
@@ -170,7 +174,7 @@ inline void CAM_average(char * filename, int first_file, int last_file, double f
 /// WARNING: This function does not check that all the files correspond to the same simulation, or whether they are "averageable" or not
 /// verbose: 0 for running silently, 1 for printing on screen the file being processed
 ////////////////////////////////////////////////////////////////////////////////////////
-inline void SAM_average(char * filename, int first_file, int last_file, double factor, int verbose )
+inline void SAM_average(char * filename, int first_file, int last_file, int stride, double factor, int verbose )
 {
 	int flag;
 	/*Read header of first file to obtain size of slice */
@@ -206,8 +210,8 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 	samples=malloc(num_cells*sizeof(int));
 	if (samples==NULL) {printf("SAM_average: error allocating samples array. \n"); exit(EXIT_FAILURE);}
 	
-	int samples_baseline = last_file - first_file + 1;//maximum number of samples that will be used in any cell
-	
+	//int samples_baseline = last_file - first_file +	 1;//maximum number of samples that will be used in any cell
+	int samples_baseline = 1+(int)((last_file - first_file)/stride );
 	
 	/* Initialization */
 	int i,j;
@@ -221,10 +225,13 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 	/* Read data from all files and start the average */
 	double aux=0.0;
 	int read_flag=0;
+	int actual_last_file;
 		
 	if(verbose){ printf("Processing file %s\n",filename1); }
-	for(i=first_file; i<=last_file; i++) //file 1 is open the first time that we pass through here	
+	for(i=first_file; i<=last_file; i=i+stride) //file 1 is open the first time that we pass through here	
 	{
+		actual_last_file = i;
+		
 		for(j=0;j<num_cells;j++)
 		{
 			read_flag=fscanf(fp, "%lf", &aux);
@@ -247,12 +254,12 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 		if( flag !=0 ){ fprintf(stderr,"export_vtk_plasma: error closing file\n Aborting...\n"); exit(EXIT_FAILURE); }
 	
 		/* ... prepare the name of the next file...*/
-		if(i==last_file)
+		if(i+stride>last_file)
 		{
 			break; 
 		}
 		strcpy(filename1,filename);		
-		sprintf(intaschar, "_%d.dat", i+1);
+		sprintf(intaschar, "_%d.dat", i+stride);
 		strcat(filename1,intaschar);
 		
 		if(verbose){ printf("Processing file %s\n",filename1); }
@@ -269,7 +276,7 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 			fprintf(stderr,"SAM_average: Error reading numbers from file. Aborting...\n");
 			exit(EXIT_FAILURE);
 		}
-		
+				
 	}
 	
 	
@@ -279,7 +286,7 @@ inline void SAM_average(char * filename, int first_file, int last_file, double f
 	fopen(filename1,"w");
 	
 	/* Export extended header */
-	fprintf( fp, "%d \t %d \t %d \t %d \t %d \t %d \t %d\n", nx, ny, nz, cell_idx_start, cell_idx_end, first_file, last_file);
+	fprintf( fp, "%d \t %d \t %d \t %d \t %d \t %d \t %d \t %d\n", nx, ny, nz, cell_idx_start, cell_idx_end, first_file, stride, actual_last_file);
 		
 
 	for(i=0; i<num_cells; i++)
@@ -441,18 +448,6 @@ inline void find_sym_cells( int ny, int nz, int cell_idx, int * sym_cells )
 
 
 
-
-
-/////////////////////////////////////////////////////////////////////////////
-/// Finds cells that are symmetrically equivalent to the given cell in the cylinder slice. 
-/// All indices are relative to the slice.
-/// Input:
-/////////////////////////////////////////////////////////////////////////////
-inline void find_sym_cells( int ny, int nz, int cell_idx, int * sym_cells )
-{
-
-	return;
-}
 
 
 
