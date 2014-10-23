@@ -41,7 +41,7 @@ and accelerations of all particles. It also exports auxiliary vtk files: collisi
 /* Checks, at every timestep, that the instantaneous density at any collision cell is less than DENSITY_TOLxInitial density */
 #define CHECK_COMPRESSIBILITY 0
 
-/* At setup, there is an avarega density per cell (bulk cells have a higher density than this, boundary cells have a lower density)*/
+/* At setup, there is an avarege density per cell (bulk cells have a higher density than this, boundary cells have a lower density)*/
 /* DENSITY_TOL defines the % of variation allowed from the average density. For example, 50% variation is DENSITY_TOL = 0.5 */
 #define DENSITY_TOL 0.5
 /* This defines the maximum occupancy allowed in any given cell as density*DENSITY_MAX. This is not related to complressibility chekcs. */

@@ -55,7 +55,8 @@ nz=int(dimensions[2])
 idx_first_cell = int(dimensions[3])
 idx_last_cell = int(dimensions[4])
 first_file = int(dimensions[5])
-last_file = int(dimensions[6])
+stride = int(dimensions[6])
+last_file = int(dimensions[7])
 
 #get data for the slice to be plotted, save in pandas dataframe
 data = pd.read_table(input_file,sep='\t',skiprows=1,skipinitialspace=True,header=None)
@@ -95,13 +96,14 @@ plt.savefig( pdffig_samples, format="pdf" )
 
 #add metadata to figure
 metadata = pdffig_samples.infodict()
-metadata['Title'] = 'Data plotted =' + input_file 
+metadata['Title'] = 'Data plotted =' + sys.argv[1] #input_file 
 metadata['Author'] = 'Script used to plot this = slice_plot.py'
 metadata['Subject']= 'Info on averages plotted in '+outputname
-metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file)
+metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
 #metadata['Creator'] = 
 #metadata['Producer']=
 pdffig_samples.close()
+
 
 ##########################################
 
@@ -120,10 +122,10 @@ plt.savefig( pdffig, format="pdf")#output_dir + outputname )
 
 #add metadata to figure
 metadata = pdffig.infodict()
-metadata['Title'] = 'Data plotted =' + input_file 
+metadata['Title'] = 'Data plotted =' + sys.argv[1] #input_file 
 metadata['Author'] = 'Script used to plot this = slice_plot.py'
 metadata['Subject']= 'Info on samples(SAM)/particles(CAM) plotted in '+outputname_samples
-metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file)
+metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
 #metadata['Creator'] = 
 #metadata['Producer']=
 

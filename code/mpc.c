@@ -799,8 +799,8 @@ int main(int argc, char **argv) {
 	printf("Start: %s\n",ctime(&now));
 	
 	/* Echo parameter values to log file */
-	printf("----------------------------------------\n");
-	printf("Parameter \t Value\n");
+	printf("========================================\n");
+	printf("%-15s \t %-15s\n","Parameter","Value");
 	printf("----------------------------------------\n");
 	printf("%-15s \t %.4lf\n","density",density);
 	printf("%-15s \t %d\n","n_part",n_part);
@@ -820,8 +820,8 @@ int main(int argc, char **argv) {
 	// export hydrodynamic numbers?
 		
 	/* Echo relevant macro values to log file*/
-	printf("----------------------------------------\n");
-	printf("Macro \t\t Value\n");
+	printf("========================================\n");
+	printf("%-15s \t %-15s\n","Macro","Value");
 	printf("----------------------------------------\n");
 	printf("%-15s \t %lf\n","EQN_EPS (not used)",EQN_EPS);
 	printf("%-15s \t %e\n","TIME_EPS",TIME_EPS);
@@ -829,10 +829,16 @@ int main(int argc, char **argv) {
 	printf("%-15s \t %lf \n","DENSITY_TOL",DENSITY_TOL);
 	printf("%-15s \t %d \n","DENSITY_MAX",DENSITY_MAX);
 	printf("%-15s \t %d \n","GALILEAN_SHIFT",GALILEAN_SHIFT);
+	printf("----------------------------------------\n");
 	printf("%-15s \t %d\n","MONITOR_EQUILIBRATION",MONITOR_EQUILIBRATION);
+	printf("%-15s \t %d\n","EXPORT_STATES",EXPORT_STATES);
+	printf("%-15s \t %d\n","EXPORT_VEL_PROFILE",EXPORT_VEL_PROFILE);
+	printf("%-15s  %d\n","EXPORT_VEL_PROFILE_SKIP",EXPORT_VEL_PROFILE_SKIP); 
+	printf("%-15s \t %d\n","EXPORT_TEMPERATURE",EXPORT_TEMPERATURE);
+
 	
 	/* Echo additional info to log file */
-	printf("----------------------------------------\n");
+	printf("========================================\n");
 	printf("Other information \n");
 	printf("----------------------------------------\n");
 	printf("%-30s \t %.4lf\n","Mean free path",dt * sqrt(T*m_inv));
@@ -840,7 +846,7 @@ int main(int argc, char **argv) {
 	printf("%-30s \t %.4lf\n","Collision viscosity /eta/", m * (density-1+exp(-density))/(12*a*dt));
 	printf("%-30s \t %.4lf\n","Total viscosity /eta/ ", density * T * dt * ((density/(density-1+exp(-density)))-0.5)/(a*a*a) + m * (density-1+exp(-density))/(12*a*dt));
 	printf("%-30s \t %.4lf\n","Knudsen number (Kn)",dt * sqrt(T*m_inv)/a); // Kn>>1 is free molecular regime, Kn<<1 is hydrodynamic regime, Kn around 1 is gas rarefaction
-	
+	printf("----------------------------------------\n");
 	
 	/*------------------------------------------------------------------*/
 	/*	RNG INITIALIZATION					    */
@@ -896,7 +902,7 @@ int main(int argc, char **argv) {
 	printf("%-30s \t %d\n","cell_occupancy storage limit", max_oc);
 
 	//printf("Minimum cell occupancy: %d\n", (int)density-(int)(DENSITY_TOL*density));
-	printf("--------------------------------\n");
+	printf("========================================\n");
 	
 	cell_occupation_rmo=malloc((max_oc+1)*n_cells*sizeof(int));
 	if (cell_occupation_rmo==NULL) {printf("Error allocating cell_occupation_rmo in mpc.c\n"); exit(EXIT_FAILURE);}
@@ -1165,7 +1171,7 @@ int main(int argc, char **argv) {
 	#endif
 	
 	time(&now);
-	printf("Finish: %s\n",ctime(&now));
+	printf("\nFinish: %s\n",ctime(&now));
 	
 	/*------------------------------------------------------------------*/
 	/*	EXITING							    */

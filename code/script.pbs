@@ -2,7 +2,7 @@
 #PBS -V
 #PBS -l nodes=1:ppn=1,pvmem=500mb,walltime=00:50:00
 #PBS -q devel
-#PBS -e ./elogs/
+#PBS -e ./../experiments/
 #PBS -o ./../experiments/
 
 # Change into the directory where I typed "qsub"

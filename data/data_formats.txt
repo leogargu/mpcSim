@@ -1,0 +1,112 @@
+**************************************************************
+INFORMATION ON DATA FORMATS
+**************************************************************
+
+The basic data formats handled by mpcSim are:
+(1) CAM datafile
+(2) SAM datafile **
+(3) CAM averaged datafile
+(4) SAM averaged datafile
+
+**Not active at the moment (export_routine.h method export_SAM_data_scalar need modification to take the new format)
+
+------------------------------------
+(1) CAM datafile
+------------------------------------
+It contains information on a scalar quantity for all particles in a set of cells, for a particular timestep.
+The set of cell must have consecutive indices. Each row corresponds to a different cell
+
+Format:
+
+________________________________
+|<---------- header ----------> |
+| [col_0]  [col_1] ...  [col_n] |
+|   ... .     ...	  ...	|
+|   				|
+|_______________________________|
+
+[a] header: Values separated by tabs, ending in new line
+	    
+            nx  ny  nz  first_cell_idx  last_cell_idx  step
+            
+            nx,ny,nz: 		dimensions (in number of cells) of the whole simulation box
+            first_cell_index:	Relative index of the first cell. Legacy from export_routines: it is the index of the first element of the array that is actually exported.
+            last_cell_index: 	Relative index of the last cell exported. Relative to the data array exported. If the whole array was exported, last-first=num cells in group of cells being exported
+            step:		Timestep at which the data is exported
+            
+[b] col_0: Local particle number present at this timestep in the cell corresponding to that row. This is also the number of non-empty columns in this row, not counting the first one.
+
+[c] col_i: scalar quantity value for a particle present in this cell (row) at the given timestep. Particle indices are not recorded.
+
+------------------------------------
+(2) SAM datafile **
+------------------------------------
+
+**TODO
+
+------------------------------------
+(3) CAM averaged datafile
+------------------------------------
+It contains the result of doing a CAM average over a number of CAM datafiles. The filename is constructed from that of the individual files by adding the suffix "CAM_averaged.dat"
+Each row corresponds to a different cell
+
+Format:
+
+______________________
+|<---- header -----> |
+| [col_0]  [col_1]   |
+|   ... .     ...    |
+|____________________|
+
+[a] header: Values separated by tabs, ending in new line
+	    
+            nx  ny  nz  first_cell_idx  last_cell_idx  first_file  stride  last_file
+            
+            nx,ny,nz: 		dimensions (in number of cells) of the whole simulation box
+            first_cell_index:	Relative index of the first cell. Legacy from export_routines: it is the index of the first element of the array that is actually exported.
+            last_cell_index: 	Relative index of the last cell exported. Relative to the data array exported. If the whole array was exported, last-first=num cells in group of cells being exported
+            first_file:		Number of the first file used in the CAM average (inclusive).
+            stride:		Stride used from teh first file to the last one (stride=1 takes all files)
+            last_file:		Number of the last file used in the CAM average (inclusive).
+      
+            
+[b] col_0: Total number of particles found in this cell (=row) across all the samples involved in the average
+
+[c] col_i: CAM-Average of the scalar quantity under consideration
+
+Note that the last_file recorded in the averaged .dat file might be different from the last file value passed to teh average routines, as the actual last file depends on the stride and starting file.
+
+------------------------------------
+(4) SAM averaged datafile
+------------------------------------
+It contains the result of doing a SAM average over a number of SAM datafiles. The filename is constructed from that of the individual files by adding the suffix "SAM_averaged.dat"
+Each row corresponds to a different cell
+
+Format:
+
+______________________
+|<---- header -----> |
+| [col_0]  [col_1]   |
+|   ... .     ...    |
+|____________________|
+
+[a] header: Values separated by tabs, ending in new line
+	    
+            nx  ny  nz  first_cell_idx  last_cell_idx  first_file  stride  last_file
+            
+            nx,ny,nz: 		dimensions (in number of cells) of the whole simulation box
+            first_cell_index:	Relative index of the first cell. Legacy from export_routines: it is the index of the first element of the array that is actually exported.
+            last_cell_index: 	Relative index of the last cell exported. Relative to the data array exported. If the whole array was exported, last-first=num cells in group of cells being exported
+            first_file:		Number of the first file used in the CAM average (inclusive).
+            stride:		Stride used from teh first file to the last one (stride=1 takes all files)
+            last_file:		Number of the last file used in the CAM average (inclusive).
+      
+            
+[b] col_0: Total number of samples used in the average for this cell (=row). Samples where the cell under consideration is empty are discarded and do not participate in the SAM average for that cell (they may participate in the average of othere cells)
+
+[c] col_i: SAM-Average of the scalar quantity under consideration.
+
+Note that the last_file recorded in the averaged .dat file might be different from the last file value passed to teh average routines, as the actual last file depends on the stride and starting file.
+
+
+**************************************************************

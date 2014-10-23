@@ -37,7 +37,7 @@ plt.savefig(pdffig,format="pdf")
 
 #add metadata to figure
 metadata = pdffig.infodict()
-metadata['Title'] = 'Datafile plotted: '+ input_dir + inputname
+metadata['Title'] = 'Datafile plotted: '+ inputname
 metadata['Author'] = 'Script used to plot this = '+ sys.argv[0]
 metadata['Subject']= ''
 metadata['Keywords']= ''

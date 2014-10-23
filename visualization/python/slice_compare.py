@@ -21,7 +21,7 @@ import chr_matplotlib
                
 # check number of calling arguments
 if len(sys.argv)<3:
-	print "call as: \n>>python slice_compare.py <full path and name of SAM file in /experiments> <full path and name of CAM file in /experiments> <(optional) name output file, without extension>\n"
+	print "call as: \n>>python slice_compare.py <name of SAM file in /experiments> <name of CAM file in /experiments> <(optional) name output file, without extension>\n"
 	sys.exit(1)
 	
 	
@@ -66,7 +66,9 @@ nz=int(dimensions[2])
 idx_first_cell = int(dimensions[3])
 idx_last_cell = int(dimensions[4])
 first_file = int(dimensions[5])
-last_file = int(dimensions[6])
+stride = int(dimensions[6])
+last_file = int(dimensions[7])
+
 
 #get data for the slice to be plotted, save in pandas dataframe
 data_sam = pd.read_table(input_file_sam,sep='\t',skiprows=1,skipinitialspace=True,header=None)
@@ -116,10 +118,10 @@ plt.savefig( pdffig, format="pdf")
 
 #add metadata to figure
 metadata = pdffig.infodict()
-metadata['Title'] = 'Data plotted (2nd column) = difference ' + input_file_sam+' [MINUS] '+input_file_cam
+metadata['Title'] = 'Data plotted (2nd column) = difference ' + sys.argv[1] +' [MINUS] '+ sys.argv[2] #input_file_sam, input_file_cam
 metadata['Author'] = 'Script used to plot this = slice_compare.py'
 metadata['Subject']= 'Info on CAM and SAM avgs plotted in cam_'+outputname+' and sam_'+outputname
-metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file)
+metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
 #metadata['Creator'] = 
 #metadata['Producer']=
 pdffig.close()
@@ -142,10 +144,10 @@ plt.savefig( pdffig_sam, format="pdf" )
 
 #add metadata to figure
 metadata = pdffig_sam.infodict()
-metadata['Title'] = 'Data plotted (2nd column) =' + input_file_sam
+metadata['Title'] = 'Data plotted (2nd column) =' + sys.argv[1] #input_file_sam
 metadata['Author'] = 'Script used to plot this = slice_compare.py'
 metadata['Subject']= 'Info on corresponding CAM avg plotted in cam_'+outputname+', difference in '+ outputname
-metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file)
+metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
 #metadata['Creator'] = 
 #metadata['Producer']=
 pdffig_sam.close()
@@ -169,10 +171,10 @@ plt.savefig( pdffig_cam , format="pdf")
 
 #add metadata to figure
 metadata = pdffig_cam.infodict()
-metadata['Title'] = 'Data plotted (2nd column) =' + input_file_cam
+metadata['Title'] = 'Data plotted (2nd column) =' + sys.argv[2] #input_file_cam
 metadata['Author'] = 'Script used to plot this = slice_compare.py'
 metadata['Subject']= 'Info on corresponding SAM avg plotted in sam_'+outputname+', difference in '+ outputname
-metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file)
+metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
 #metadata['Creator'] = 
 #metadata['Producer']=
 pdffig_cam.close()

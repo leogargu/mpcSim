@@ -43,6 +43,7 @@ inline void CAM_average(char * filename, int first_file, int last_file, int stri
 	sprintf(intaschar, "_%d.dat", first_file);
 	strcat(filename1,intaschar);	
 	
+	
 	fp=fopen(filename1,"r"); 
 	if( fp == NULL ){ perror("CAM_average: Error while opening the file.\n"); exit(EXIT_FAILURE);}
  
