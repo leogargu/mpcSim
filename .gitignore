@@ -3,3 +3,6 @@
 
 # ignore temporay files
 *~
+
+#ignore backup files
+*.bak

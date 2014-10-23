@@ -150,7 +150,7 @@ inline void export_SAM_data_vector(double ** data, char * filename, int * header
 /// The array data is a 2D array with each row containing the scalar/vector values of interest for the particles in the corresponding collision cell. 
 /// Cells are stored in consecutive order. The occupation numbers (local instantaneous densities), ie length of the rows, are stored in the array of 
 /// ints local_density.
-/// The header of the output file will contain the fillowing information:
+/// The header of the output file will contain the following information:
 /// nx \t ny \t nz \t (global index of the first cell) \t (global index of the last cell) \t step
 /// Input: 
 /// data: (cells)x(variable+1) array containing the data to be exported to file. Each row corresponds to a cell. data[ci][0] is the local density in cell ci. alpha is 
