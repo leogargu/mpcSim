@@ -524,33 +524,8 @@ inline void slice_CAM_velocities(double x, Geometry cylinder, int ** cell_occupa
 }
 
 
-//////////////////////////////////////////////////////////////////////////
-/// Creates the data header for the sam and CAM export data files.
-/// Input:
-/// x - position of the x-slice. If the data refers to the whole simulation box, use -1.0.
-/// cylinder - Geometry struct. Needed for assert checks.
-/// file_number - Self-explanatory. This is used by teh export SAM/CAM functions to create the file name
-/// step - Current timestep
-/// Output:
-/// data_header - header for the data file
-//////////////////////////////////////////////////////////////////////////
-inline void update_data_header(Geometry cylinder, int file_number, double x , int step, int * data_header)
-{	
-	data_header[0] = file_number;
-	assert( data_header[1] == cylinder.n_cells_dim[0] );
-	assert( data_header[2] == cylinder.n_cells_dim[1] );
-	assert( data_header[3] == cylinder.n_cells_dim[2] );
-	if( x>=0.0 )
-	{
-		data_header[4] = slice_start_index(x, cylinder.n_cells_dim[1]*cylinder.n_cells_dim[3], cylinder.a);
-	}else{
-		assert( x == -1.0 );
-		data_header[4] = -1;
-	}
-	data_header[5] = step;
-	
-	return;/*back to main*/
-}
+
+
 
 /*
 /* It exports the data to do the averages to calculate the 3Dvelocity profile at a given *
@@ -718,7 +693,6 @@ int main(int argc, char **argv) {
 	
 	FILE * input_fp;
 	input_fp = fopen(argv[1],"r");
-	//input_fp = fopen("input.dat","r");
 	if(input_fp == NULL){ fprintf(stderr,"Cannot open input file.\n Aborting...\n"); exit(EXIT_FAILURE);}
 	
 	
@@ -777,7 +751,21 @@ int main(int argc, char **argv) {
 	
 	double t = 0.0;					/// Time
 	int equilibration_export = 10;			/// Number of timesteps in between data exports during the equilibration phase
-	int data_header[6] = { 0, cylinder.n_cells_dim[0], cylinder.n_cells_dim[1], cylinder.n_cells_dim[2], -1, 0};
+	/* data_header contains this info: file_number nx ny nz timestep x_slice_1stCell 
+	*  Being the x_slice1stCell the global index of the first cell in that slice (equivalent to specifying x_slice -double- )
+	*/
+	int data_header_size = 6;
+	int * data_header;
+	data_header=malloc(data_header_size * sizeof(int));
+	if(data_header==NULL){printf("mpc.c: Error allocating memory for data_header\nAborting...\n");exit(EXIT_FAILURE);}
+	data_header[0] = 0;
+	data_header[1] = cylinder.n_cells_dim[0];
+	data_header[2] = cylinder.n_cells_dim[1];
+	data_header[3] = cylinder.n_cells_dim[2];
+	data_header[4] = -1;
+	data_header[5] = -1;
+	
+	
 	double aux3Dvector[3] = {0.0, 0.0, 0.0};
 
 	
@@ -1059,6 +1047,67 @@ int main(int argc, char **argv) {
 		if(eq_fp == NULL){printf("mpc.c: Error opening eq_fp file. Aborting...\n "); exit(EXIT_FAILURE);}
 	#endif
 	
+	
+	
+	/*------------------------------------------------------------------*/
+	/*     PREPARE  x-positions where the velocity profile is exported    */
+	/*------------------------------------------------------------------*/
+	/* Choose x-position at which the velocity profile will be exported (see implementation in collide.c)<--mysterious comment */
+	/* Memory allocation */ 
+	#if EXPORT_VEL_PROFILE
+	
+		/* Check we know at what x-positions the velocity profile will be exported */
+		if( argc<3 )
+		{
+			printf("mpc.c: Missing .dat file containing positions of x_slices for velocity profile study\nCall as:\n./mpcSim input.dat x_slices.dat\nAborting...\n");
+			exit(EXIT_FAILURE);
+		}
+	
+		/* Generous allocation of memory */
+		double * x_slices;
+		x_slices = malloc( cylinder.n_cells_dim[0] * sizeof(double) );
+		if( x_slices==NULL ){ printf("mpc.c: Allocating memory for x_slices failed.\nAborting..."); exit(EXIT_FAILURE);}
+		int * x_slices_idxs;
+		x_slices_idxs = malloc( cylinder.n_cells_dim[0] * sizeof(int) );
+		if( x_slices_idxs == NULL){ printf("mpc.c: Allocating memory for x_slices_idxs failes\nAborting...|n"); exit(EXIT_FAILURE);}
+	
+		/* Prepare to read in the values */
+		int num_slices=0;
+	
+		/* Open the file with the x-positions of the slices */
+		FILE * x_slices_fp;
+		x_slices_fp = fopen(argv[2],"r");
+		if(x_slices_fp == NULL){ fprintf(stderr,"Cannot open x_slices file.\n Aborting...\n"); exit(EXIT_FAILURE);}
+		
+		/* Read the x-positions, count how many we have */
+		while ( fscanf(x_slices_fp, "%lf", &value) == 1) { //value was defined above as an auxiliary variable
+			x_slices[num_slices] = value;
+			num_slices++;
+		}
+		
+		
+		/*Health check*/
+		assert( num_slices <= cylinder.n_cells_dim[0] && num_slices >=0 ); 
+		for(i=0; i<num_slices;i++){
+			if( x_slices[i] >= Lx || x_slices[i] <0 ) {
+				fprintf(stderr,"Slice of interest num %d is outside cylinder. Exiting...\n",i);
+				exit(EXIT_FAILURE);
+			}
+		}
+	
+		/* Calculate indices of fist cell in each of the slices */
+		for(i=0; i<num_slices; i++)
+		{
+			x_slices_idxs[i] = slice_start_index(x_slices[i], cylinder.n_cells_dim[1]*cylinder.n_cells_dim[2], cylinder.a);
+			/* Health check */
+			assert( x_slices_idxs[i] < cylinder.n_cells );
+			assert( x_slices_idxs[i] >=0 );
+		}
+		
+	#endif
+	
+
+	
 	/*------------------------------------------------------------------*/
 	/*	SIMULATION						    */
 	/*------------------------------------------------------------------*/
@@ -1070,14 +1119,6 @@ int main(int argc, char **argv) {
 	/* Export velocity profile setup*/
 	int file_counter = 0;
 	int counter = 0;
-	
-	/* Choose x-position at which the velocity profile will be exported (see implementation in collide.c)*/
-	double x_slice = 15.5; // check that it is less than Lx (periodic conditions probably compensate anyway...)
-	if( x_slice >= Lx || x_slice <=0 )
-	{
-		fprintf(stderr,"Slice of interest is outside cylinder. Exiting...\n");
-		exit(EXIT_FAILURE);
-	}
 	
 
 	#if GALILEAN_SHIFT == 0
@@ -1136,15 +1177,32 @@ int main(int argc, char **argv) {
 		#endif
 		
 	
+
+		
 		/* Export velocity data every 10 timesteps, after the first equilibration_time timesteps*/
 		#if EXPORT_VEL_PROFILE
+			const char data_filename[60]="./../experiments/velprof_slice%d";
+			char slice_filename[100]="";
+		
 			counter++;
 			if( counter==equilibration_time + EXPORT_VEL_PROFILE_SKIP )
 			{
 				encage(pos, null_shift, n_part, cylinder, c_p, 1, cell_occupation, max_oc);
-				slice_CAM_velocities(x_slice, cylinder, cell_occupation, vel, 1, slice_CAM_scalar); // only x-component of the velocities
-				update_data_header(cylinder, file_counter, x_slice, i, data_header);
-				export_CAM_data(1, slice_CAM_scalar, "./../experiments/velprof", data_header,0, slice_size-1);
+				/* Update data header (1/2) */
+				data_header[0] = file_counter;
+				data_header[4] = i;
+				
+				for(j=0; j<num_slices; j++)
+				{
+					slice_CAM_velocities(x_slices[j], cylinder, cell_occupation, vel, 1, slice_CAM_scalar); // only x-component of the velocities
+					/* Update data header (2/2) */
+					data_header[5] = x_slices_idxs[j];
+					snprintf(slice_filename,100,data_filename,j);
+					assert( data_header[1] == cylinder.n_cells_dim[0] );
+					assert( data_header[2] == cylinder.n_cells_dim[1] );
+					assert( data_header[3] == cylinder.n_cells_dim[2] );
+					export_CAM_slice(1, slice_CAM_scalar, slice_filename, data_header_size, data_header);
+				}
 				file_counter++;
 				counter = equilibration_time;
 			}
@@ -1201,6 +1259,7 @@ int main(int argc, char **argv) {
 	free(slice_CAM_scalar);
 	free(slice_CAM_vector_rmo);
 	free(slice_CAM_vector);
+	free(x_slices);
 	
 	gsl_rng_free(r); /* free memory associated with the rng r */
 

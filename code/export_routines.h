@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-//#include <time.h>
 #include <assert.h>
 #include <string.h>
 
@@ -146,22 +145,32 @@ inline void export_SAM_data_vector(double ** data, char * filename, int * header
 }
 
 //////////////////////////////////////////////////////////////////////////
+/// Exports CAM data corresponding to a slice. See docs for export_CAM_data.
+//////////////////////////////////////////////////////////////////////////
+inline void export_CAM_slice(int is_scalar, double ** slice_data, char * filename, int header_size, int * header)
+{
+	export_CAM_data(is_scalar, slice_data, filename, header_size, header, 0, header[2]*header[3]-1 );
+}
+
+
+//////////////////////////////////////////////////////////////////////////
 /// This function exports the data contained in the array data in a file format suitable for calculating a CAM average with average.c.
 /// The array data is a 2D array with each row containing the scalar/vector values of interest for the particles in the corresponding collision cell. 
 /// Cells are stored in consecutive order. The occupation numbers (local instantaneous densities), ie length of the rows, are stored in the array of 
 /// ints local_density.
-/// The header of the output file will contain the following information:
-/// nx \t ny \t nz \t (global index of the first cell) \t (global index of the last cell) \t step
-/// Input: 
+/// The header of the output file contains all the elements in the array header, except for the first one (file number)
+/// INPUT:
+/// is_scalar: 1 if the CAM data is of a scalar quantity, 0 if it is of a vector quantity (3D)
 /// data: (cells)x(variable+1) array containing the data to be exported to file. Each row corresponds to a cell. data[ci][0] is the local density in cell ci. alpha is 
 /// the number of particles in each cell (data[ci][0]=alpha). If data is scalar, an example could be: 3 e1 e2 e3, for row ci. If the quantity is a vector, for example the velocities, 
 /// the the row for cell ci would look like: 3 v1x v1y v1z v2x v2y v2z v3x v3y v3z.
-/// cell_start: index (within the data) of the first cell that will be exported. 
-/// cell_end: index (within the data) of the last cell that will be exported.
-/// header: array of ints containing the following information: file_number nx ny nz first_cell_index step
-/// where the first_cell_index is the global index of the first cell recorded in data (inclusive), or -1 if the data array contains information on the whole simulation box (i.e. all slices)
+/// filename: basic filename, without the filenumber (it will be appended, for example: "_15.dat")
+/// start: index (in the data array) of the first row of data to be exported
+/// end: index (in the data array) of teh last row of data to be exported
+/// header: array of ints containing the following information: file_number ..., 
+/// where the dots stand for additional information (e.g. nx, ny, nz, timestep, x_slice_index, etc)
 //////////////////////////////////////////////////////////////////////////
-inline void export_CAM_data(int is_scalar, double ** data, char * filename, int * header, int cell_start, int cell_end)
+inline void export_CAM_data(int is_scalar, double ** data, char * filename, int header_size, int * header, int start, int end)
 {
 	FILE * fp;
 	
@@ -182,22 +191,15 @@ inline void export_CAM_data(int is_scalar, double ** data, char * filename, int 
 		exit(EXIT_FAILURE);
 	}
 	
-	int cell_idx_start, cell_idx_end;
-	if( header[4] == -1 )
-	{
-		cell_idx_start = 0;
-		cell_idx_end = cell_end - cell_start + 1;
-	}else{
-		cell_idx_start = cell_start;
-		cell_idx_end = cell_idx_start + cell_end - cell_start;
-	}
-	
 	/* Print header */
-	//fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", header[1], header[2], header[3], cell_start, cell_end, header[4]);
-	fprintf(fp,"%d \t %d \t %d \t %d \t %d \t %d \n", header[1], header[2], header[3], cell_idx_start, cell_idx_end ,header[5]);
+	for(i=1; i<header_size; i++)
+	{
+		fprintf(fp,"%d \t", header[i]);
+	}
+	fprintf(fp,"\n");
 
 	/* Export to file */
-	for(i=cell_start; i<=cell_end; i++) // i is the cell in the slice of interest
+	for(i=start; i<=end; i++) // i is the cell in the slice of interest
 	{	
 		local_density = (int)data[i][0];
 		fprintf(fp, "%d\t", local_density);
