@@ -754,16 +754,17 @@ int main(int argc, char **argv) {
 	/* data_header contains this info: file_number nx ny nz timestep x_slice_1stCell 
 	*  Being the x_slice1stCell the global index of the first cell in that slice (equivalent to specifying x_slice -double- )
 	*/
-	int data_header_size = 6;
+	int data_header_size = 7;
 	int * data_header;
 	data_header=malloc(data_header_size * sizeof(int));
 	if(data_header==NULL){printf("mpc.c: Error allocating memory for data_header\nAborting...\n");exit(EXIT_FAILURE);}
-	data_header[0] = 0;
-	data_header[1] = cylinder.n_cells_dim[0];
-	data_header[2] = cylinder.n_cells_dim[1];
-	data_header[3] = cylinder.n_cells_dim[2];
-	data_header[4] = -1;
-	data_header[5] = -1;
+	data_header[0] = 0;				// file number
+	data_header[1] = cylinder.n_cells_dim[0]; 	// nx
+	data_header[2] = cylinder.n_cells_dim[1];	// ny
+	data_header[3] = cylinder.n_cells_dim[2];	// nz
+	data_header[4] = -1;				// GLOBAL index first cell included in datafile (first cell in slice, if data is a slice)
+	data_header[5] = -1;				// GLOBAL index last cell included in datafile
+	data_header[6] = -1;				// timestep
 	
 	
 	double aux3Dvector[3] = {0.0, 0.0, 0.0};
@@ -1190,17 +1191,21 @@ int main(int argc, char **argv) {
 				encage(pos, null_shift, n_part, cylinder, c_p, 1, cell_occupation, max_oc);
 				/* Update data header (1/2) */
 				data_header[0] = file_counter;
-				data_header[4] = i;
+				data_header[6] = i;
 				
 				for(j=0; j<num_slices; j++)
 				{
+					/* Gather data for the slice*/
 					slice_CAM_velocities(x_slices[j], cylinder, cell_occupation, vel, 1, slice_CAM_scalar); // only x-component of the velocities
 					/* Update data header (2/2) */
-					data_header[5] = x_slices_idxs[j];
-					snprintf(slice_filename,100,data_filename,j);
+					data_header[4] = x_slices_idxs[j];
+					data_header[5] = x_slices_idxs[j] + cylinder.n_cells_dim[1]*cylinder.n_cells_dim[2] - 1;
 					assert( data_header[1] == cylinder.n_cells_dim[0] );
 					assert( data_header[2] == cylinder.n_cells_dim[1] );
 					assert( data_header[3] == cylinder.n_cells_dim[2] );
+					/* build export filename */
+					snprintf(slice_filename,100,data_filename,j);
+					/* export the data */
 					export_CAM_slice(1, slice_CAM_scalar, slice_filename, data_header_size, data_header);
 				}
 				file_counter++;

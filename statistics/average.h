@@ -4,8 +4,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h> //isnan lives here
-//#include <time.h>
+#include <math.h> // isnan lives here
 #include <string.h>
 #include <assert.h>
 
@@ -51,8 +50,10 @@ inline void CAM_average(char * filename, int first_file, int last_file, int stri
 	long int step=0;
 	int cell_idx_start=0 ,cell_idx_end= 0;
 	
+	/* Reading header of data file */
 	fscanf( fp, "%d \t %d \t %d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &cell_idx_start, &cell_idx_end, &step);
-	
+
+		
 	/* Identify volume to study (set of collision cells) */
 	int num_cells = cell_idx_end - cell_idx_start + 1;
 	
@@ -78,7 +79,7 @@ inline void CAM_average(char * filename, int first_file, int last_file, int stri
 	/* Read data from all files and start the average */
 	double row_length; // this is the occupation number for a given cell. It is stored as a double because the data file will be a 2D array of doubles, only the first element will be "special"
 	double aux;
-	int actual_last_file;
+	int actual_last_file=first_file;
 	
 	//this loop should be a do-while instead
 	if(verbose){ printf("Processing file %s\n",filename1); }
@@ -226,7 +227,7 @@ inline void SAM_average(char * filename, int first_file, int last_file, int stri
 	/* Read data from all files and start the average */
 	double aux=0.0;
 	int read_flag=0;
-	int actual_last_file;
+	int actual_last_file=first_file;
 		
 	if(verbose){ printf("Processing file %s\n",filename1); }
 	for(i=first_file; i<=last_file; i=i+stride) //file 1 is open the first time that we pass through here	

@@ -30,8 +30,8 @@ ________________________________
             nx  ny  nz  first_cell_idx  last_cell_idx  step
             
             nx,ny,nz: 		dimensions (in number of cells) of the whole simulation box
-            first_cell_index:	Relative index of the first cell. Legacy from export_routines: it is the index of the first element of the array that is actually exported.
-            last_cell_index: 	Relative index of the last cell exported. Relative to the data array exported. If the whole array was exported, last-first=num cells in group of cells being exported
+            first_cell_index:	Global index of the first cell. If data is about an slice, this is the global index of the first cell (equivalent to x_slice value via first_cell_idx/nynz=x_slice*a+0.5*a) 
+            last_cell_index: 	Global index of the last cell exported (inclusive). If this is slice data, last_cell_idx=first_cell_idx+nynz-1
             step:		Timestep at which the data is exported
             
 [b] col_0: Local particle number present at this timestep in the cell corresponding to that row. This is also the number of non-empty columns in this row, not counting the first one.
@@ -63,8 +63,8 @@ ______________________
             nx  ny  nz  first_cell_idx  last_cell_idx  first_file  stride  last_file
             
             nx,ny,nz: 		dimensions (in number of cells) of the whole simulation box
-            first_cell_index:	Relative index of the first cell. Legacy from export_routines: it is the index of the first element of the array that is actually exported.
-            last_cell_index: 	Relative index of the last cell exported. Relative to the data array exported. If the whole array was exported, last-first=num cells in group of cells being exported
+            first_cell_index:	Global index of the first cell. If data is about an slice, this is the global index of the first cell (equivalent to x_slice value via first_cell_idx/nynz=x_slice*a+0.5*a) 
+            last_cell_index: 	Global index of the last cell exported (inclusive). If this is slice data, last_cell_idx=first_cell_idx+nynz-1
             first_file:		Number of the first file used in the CAM average (inclusive).
             stride:		Stride used from teh first file to the last one (stride=1 takes all files)
             last_file:		Number of the last file used in the CAM average (inclusive).
@@ -95,8 +95,8 @@ ______________________
             nx  ny  nz  first_cell_idx  last_cell_idx  first_file  stride  last_file
             
             nx,ny,nz: 		dimensions (in number of cells) of the whole simulation box
-            first_cell_index:	Relative index of the first cell. Legacy from export_routines: it is the index of the first element of the array that is actually exported.
-            last_cell_index: 	Relative index of the last cell exported. Relative to the data array exported. If the whole array was exported, last-first=num cells in group of cells being exported
+            first_cell_index:	Global index of the first cell. If data is about an slice, this is the global index of the first cell (equivalent to x_slice value via first_cell_idx/nynz=x_slice*a+0.5*a) 
+            last_cell_index: 	Global index of the last cell exported (inclusive). If this is slice data, last_cell_idx=first_cell_idx+nynz-1
             first_file:		Number of the first file used in the CAM average (inclusive).
             stride:		Stride used from teh first file to the last one (stride=1 takes all files)
             last_file:		Number of the last file used in the CAM average (inclusive).

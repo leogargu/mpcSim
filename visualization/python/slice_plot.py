@@ -52,11 +52,11 @@ dimensions=header.split()
 nx=int(dimensions[0])
 ny=int(dimensions[1])
 nz=int(dimensions[2])
-idx_first_cell = int(dimensions[3])
-idx_last_cell = int(dimensions[4])
-first_file = int(dimensions[5])
-stride = int(dimensions[6])
-last_file = int(dimensions[7])
+idx_first_cell = int(dimensions[3])	#global index of the first cell included in the datafile
+idx_last_cell = int(dimensions[4])	#global index of the last cell included in the datafile
+first_file = int(dimensions[5])		#first datafile number used in the average that generated the datafile plotted here 
+stride = int(dimensions[6])		#stride used when calculating the average datafile plotted here
+last_file = int(dimensions[7])		#last datafile number used in the average that generated the datafile plotted here
 
 #get data for the slice to be plotted, save in pandas dataframe
 data = pd.read_table(input_file,sep='\t',skiprows=1,skipinitialspace=True,header=None)
@@ -78,7 +78,8 @@ samples=samples.reshape(ny,nz)
 averages=averages.reshape(ny,nz)
 
 ##########################################
-
+#The following two sections could be rewritten as 1-2 functions?
+##########################################
 #plot samples statistics
 samples[samples==0] = np.nan
 
@@ -86,12 +87,30 @@ my_cmap=plt.get_cmap('Greens') #Also interesting: jet, spectral, rainbow
 masked_array = np.ma.array(samples, mask=np.isnan(samples))
 my_cmap.set_bad(color=empty_color_stats)
 
-im_samples=plt.imshow(samples,cmap=my_cmap,interpolation='nearest')
+im_samples=plt.imshow(samples,cmap=my_cmap,interpolation='nearest',extent=[0,nz,0,ny])
 plt.colorbar(im_samples, orientation='vertical')
+
+#Beautify the axes and ticks, get them to conform to standard reference
+ax=plt.gca()
+ax.arrow(0, ny, nz, 0, fc='k', ec='k',lw = 2,
+         head_width=0.1, head_length=0.2,
+         length_includes_head= True, clip_on = False)
+ax.arrow(0, nz, 0., -nz, fc='k', ec='k',lw = 2, 
+         head_width=0.1, head_length=0.2,
+         length_includes_head= True, clip_on = False)
+ax.get_xaxis().set_ticks([])
+ax.get_yaxis().set_ticks([])
+ax.set_ylabel('Y',fontweight="bold")
+ax.xaxis.set_label_position('top') 
+ax.set_xlabel('Z',fontweight="bold")
+
+# Plot boundary circunference
+boundary = plt.Circle((ny*0.5,nz*0.5),radius=(ny-1)*0.5,linewidth=1,color='k',fill=False)
+fig = plt.gcf()
+fig.gca().add_artist(boundary)
 
 # Save sample statistics plot to disk
 pdffig_samples = PdfPages( output_dir + outputname_samples )
-#plt.savefig( output_dir + outputname_samples )
 plt.savefig( pdffig_samples, format="pdf" )
 
 #add metadata to figure
@@ -106,15 +125,33 @@ pdffig_samples.close()
 
 
 ##########################################
-
 #plot averages
 plt.figure(2)
 my_cmap=plt.get_cmap('jet') #Also interesting: jet, spectral, rainbow 
 masked_array = np.ma.array(averages, mask=np.isnan(averages))
 my_cmap.set_bad(color=empty_color_avgs)
 
-im_averages=plt.imshow(averages,cmap=my_cmap,vmin=data_min,vmax=data_max,interpolation='bicubic')#or bilinear, nearest, bicubic
+im_averages=plt.imshow(averages,cmap=my_cmap,vmin=data_min,vmax=data_max,interpolation='bicubic', extent=[0,nz,0,ny])#or bilinear, nearest, bicubic
 plt.colorbar(im_averages,orientation='vertical')
+
+#Beautify the axes and ticks, get them to conform to standard reference
+ax=plt.gca()
+ax.arrow(0, ny, nz, 0, fc='k', ec='k',lw = 2,
+         head_width=0.1, head_length=0.2,
+         length_includes_head= True, clip_on = False)
+ax.arrow(0, nz, 0., -nz, fc='k', ec='k',lw = 2, 
+         head_width=0.1, head_length=0.2,
+         length_includes_head= True, clip_on = False)
+ax.get_xaxis().set_ticks([])
+ax.get_yaxis().set_ticks([])
+ax.set_ylabel('Y',fontweight="bold")
+ax.xaxis.set_label_position('top') 
+ax.set_xlabel('Z',fontweight="bold")
+
+# Plot boundary circunference
+boundary = plt.Circle((ny*0.5,nz*0.5),radius=(ny-1)*0.5,linewidth=1,color='k',fill=False)
+fig = plt.gcf()
+fig.gca().add_artist(boundary)
 
 #save averages plot to disk, prepare metadata object first
 pdffig = PdfPages( output_dir + outputname )
