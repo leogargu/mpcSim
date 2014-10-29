@@ -38,6 +38,8 @@ ________________________________
 
 [c] col_i: scalar quantity value for a particle present in this cell (row) at the given timestep. Particle indices are not recorded.
 
+For empty cells, the row looks like '0' followed by empty space
+
 ------------------------------------
 (2) SAM datafile **
 ------------------------------------
@@ -66,7 +68,7 @@ ______________________
             first_cell_index:	Global index of the first cell. If data is about an slice, this is the global index of the first cell (equivalent to x_slice value via first_cell_idx/nynz=x_slice*a+0.5*a) 
             last_cell_index: 	Global index of the last cell exported (inclusive). If this is slice data, last_cell_idx=first_cell_idx+nynz-1
             first_file:		Number of the first file used in the CAM average (inclusive).
-            stride:		Stride used from teh first file to the last one (stride=1 takes all files)
+            stride:		Stride used from the first file to the last one (stride=1 takes all files)
             last_file:		Number of the last file used in the CAM average (inclusive).
       
             
@@ -75,6 +77,8 @@ ______________________
 [c] col_i: CAM-Average of the scalar quantity under consideration
 
 Note that the last_file recorded in the averaged .dat file might be different from the last file value passed to teh average routines, as the actual last file depends on the stride and starting file.
+
+For empty cells, the row looks like '0' followed by empty space
 
 ------------------------------------
 (4) SAM averaged datafile
@@ -98,7 +102,7 @@ ______________________
             first_cell_index:	Global index of the first cell. If data is about an slice, this is the global index of the first cell (equivalent to x_slice value via first_cell_idx/nynz=x_slice*a+0.5*a) 
             last_cell_index: 	Global index of the last cell exported (inclusive). If this is slice data, last_cell_idx=first_cell_idx+nynz-1
             first_file:		Number of the first file used in the CAM average (inclusive).
-            stride:		Stride used from teh first file to the last one (stride=1 takes all files)
+            stride:		Stride used from the first file to the last one (stride=1 takes all files)
             last_file:		Number of the last file used in the CAM average (inclusive).
       
             
@@ -107,6 +111,8 @@ ______________________
 [c] col_i: SAM-Average of the scalar quantity under consideration.
 
 Note that the last_file recorded in the averaged .dat file might be different from the last file value passed to teh average routines, as the actual last file depends on the stride and starting file.
+
+For empty cells, the row looks like '0' followed by empty space
 
 
 **************************************************************
