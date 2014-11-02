@@ -2,22 +2,37 @@
 #
 # Run this from the python directory with:
 # >> python slice_compare.py <Name of SAM averaged file in /experiments directory, with extension> <Name of CAM averaged file in /experiments directory, with extension> <(optional) name of output image, without extension>
-# If the name for the output plot is omitted, the result is saved as "output_compare.png"
+# If the name for the output plot is omitted, the result is saved as "output_compare.pdf"
 #
 
 import pandas as pd
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import sys
+import matplotlib.pyplot as plt
+from matplotlib.colors import from_levels_and_colors
+from matplotlib import ticker
 from matplotlib.backends.backend_pdf import PdfPages
 #On PdfPages:
 #http://stream.princeton.edu/AWCM/LIBRARIES/matplotlib-1.3.0/lib/matplotlib/backends/backend_pdf.py
-import chr_matplotlib
-# Helper functions by Paul H and Horea Christian, contributions from Leonor Garcia-Gutierrez
-# https://github.com/TheChymera/chr-helpers
-
         
+        
+# Auxiliary functions
+def plot_refs(plt,ny,nz):
+	#Beautify the axes and ticks, get them to conform to standard reference
+	ax=plt.gca()
+	ax.arrow(0, ny, nz, 0, fc='k', ec='k',lw = 2,head_width=0.1, head_length=0.2, length_includes_head= True, clip_on = False)
+	ax.arrow(0, nz, 0., -nz, fc='k', ec='k',lw = 2, head_width=0.1, head_length=0.2, length_includes_head= True, clip_on = False)
+	ax.get_xaxis().set_ticks([])
+	ax.get_yaxis().set_ticks([])
+	ax.set_ylabel('Y',fontweight="bold")
+	ax.xaxis.set_label_position('top') 
+	ax.set_xlabel('Z',fontweight="bold")
+	
+	# Plot boundary circunference
+	boundary = plt.Circle((ny*0.5,nz*0.5),radius=(ny-1)*0.5,linewidth=1,color='k',fill=False)
+	fig = plt.gcf()
+	fig.gca().add_artist(boundary)	
+	return
                
 # check number of calling arguments
 if len(sys.argv)<3:
@@ -46,8 +61,8 @@ if sys.argv[1]!='':
 		outputname=sys.argv[3]+".pdf" #change format if needed
 		print "Plots will be saved as " + outputname + ", cam_" + outputname + ", and sam_" + outputname
 	else:
-		outputname="output_compare.png"
-		print "Plots will be saved as output_compare.png, cam_output_compare.png and sam_output_compare.png"
+		outputname="output_compare.pdf"
+		print "Plots will be saved as output_compare.pdf, cam_output_compare.pdf and sam_output_compare.pdf"
 	print "In ", output_dir
 else:
 	print "Call as: python slice_compare.py <name of SAM av file> <name of CAM av file> <name of output plot, without the extension>"
@@ -78,7 +93,7 @@ data_cam = pd.read_table(input_file_cam,sep='\t',skiprows=1,skipinitialspace=Tru
 averages_sam = data_sam.values[:,1]
 averages_cam = data_cam.values[:,1]
 
-#find min and max over sam and cam combined to adjust auxiliary plots
+#find min and max over sam and cam combined to adjust auxiliary CAM/SAM plots
 my_vmin=np.nanmin(averages_sam)
 if np.nanmin(averages_cam) < my_vmin:
 	my_vmin = np.nanmin(averages_cam)
@@ -94,42 +109,27 @@ difference = difference.reshape(ny,nz)
 averages_cam = averages_cam.reshape(ny,nz)
 averages_sam = averages_sam.reshape(ny,nz)
 
-
-#Check health and generate color map
-if np.nanmin(difference) >=0 or np.nanmax(difference) <=0:
-	print "difference data min ", v_min, ", max ", v_max,"\n" 
-	print "ColorMap will *NOT* be shifted.\n" #see shiftedColorMap comments above, it doesn't work if vmin is not negative and vmax positive
-	my_cmap = plt.get_cmap('seismic')
-else:
-	my_cmap =  chr_matplotlib.remappedColorMap(plt.get_cmap('seismic'), data=difference)
-	# plot empty cells in a pre-determined color
-	masked_array = np.ma.array(difference, mask=np.isnan(difference))
-	my_cmap.set_bad(color=empty_color_diff)
-
-
 ##########################################
-#plot with the custom colormap
-im_difference = plt.imshow(difference,cmap=my_cmap,interpolation='bicubic',extent=[0,nz,0,ny])#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
-plt.colorbar(im_difference,orientation='vertical')
+#Plot comparison plot
+num_levels = 50
+vmin, midpoint, vmax = np.nanmin(difference), 0.0,  np.nanmax(difference)
+levels = np.linspace(vmin, vmax, num_levels)
+midp = np.mean(np.c_[levels[:-1], levels[1:]], axis=1)
 
-#Beautify the axes and ticks, get them to conform to standard reference
-ax=plt.gca()
-ax.arrow(0, ny, nz, 0, fc='k', ec='k',lw = 2,
-         head_width=0.1, head_length=0.2,
-         length_includes_head= True, clip_on = False)
-ax.arrow(0, nz, 0., -nz, fc='k', ec='k',lw = 2, 
-         head_width=0.1, head_length=0.2,
-         length_includes_head= True, clip_on = False)
-ax.get_xaxis().set_ticks([])
-ax.get_yaxis().set_ticks([])
-ax.set_ylabel('Y',fontweight="bold")
-ax.xaxis.set_label_position('top') 
-ax.set_xlabel('Z',fontweight="bold")
+vals = np.interp(midp, [vmin, midpoint, vmax], [0, 0.5, 1])
+colors = plt.cm.seismic(vals)
+cmap, norm = from_levels_and_colors(levels, colors)  #won't use the norm
 
-# Plot boundary circunference
-boundary = plt.Circle((ny*0.5,nz*0.5),radius=(ny-1)*0.5,linewidth=1,color='k',fill=False)
-fig = plt.gcf()
-fig.gca().add_artist(boundary)
+masked_array = np.ma.array(difference, mask=np.isnan(difference))
+cmap.set_bad(color='gray')
+
+fig, ax = plt.subplots()
+im = ax.imshow(masked_array, vmin=vmin, vmax=vmax,cmap=cmap,interpolation='nearest',extent=[0,nz,0,ny])
+cb=fig.colorbar(im,orientation='vertical')
+cb.locator = ticker.MaxNLocator(nbins=num_levels/3,symmetric=True,prune=None)
+cb.update_ticks()
+
+plot_refs(plt,ny,nz)
 
 #save averages plot to disk
 pdffig = PdfPages( output_dir + outputname )
@@ -157,24 +157,7 @@ my_cmap.set_bad(color=empty_color_avgs)
 im_sam=plt.imshow(averages_sam,cmap=my_cmap,vmin=my_vmin,vmax=my_vmax,interpolation='bicubic',extent=[0,nz,0,ny])#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
 plt.colorbar(im_sam,orientation='vertical')
 
-#Beautify the axes and ticks, get them to conform to standard reference
-ax=plt.gca()
-ax.arrow(0, ny, nz, 0, fc='k', ec='k',lw = 2,
-         head_width=0.1, head_length=0.2,
-         length_includes_head= True, clip_on = False)
-ax.arrow(0, nz, 0., -nz, fc='k', ec='k',lw = 2, 
-         head_width=0.1, head_length=0.2,
-         length_includes_head= True, clip_on = False)
-ax.get_xaxis().set_ticks([])
-ax.get_yaxis().set_ticks([])
-ax.set_ylabel('Y',fontweight="bold")
-ax.xaxis.set_label_position('top') 
-ax.set_xlabel('Z',fontweight="bold")
-
-# Plot boundary circunference
-boundary = plt.Circle((ny*0.5,nz*0.5),radius=(ny-1)*0.5,linewidth=1,color='k',fill=False)
-fig = plt.gcf()
-fig.gca().add_artist(boundary)
+plot_refs(plt,ny,nz)
 
 pdffig_sam = PdfPages( output_dir + "sam_" + outputname )
 
@@ -203,24 +186,8 @@ my_cmap.set_bad(color=empty_color_avgs)
 im_cam=plt.imshow(averages_cam,cmap=my_cmap,vmin=my_vmin,vmax=my_vmax,interpolation='bicubic',extent=[0,nz,0,ny])#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
 plt.colorbar(im_cam,orientation='vertical')
 
-#Beautify the axes and ticks, get them to conform to standard reference
-ax=plt.gca()
-ax.arrow(0, ny, nz, 0, fc='k', ec='k',lw = 2,
-         head_width=0.1, head_length=0.2,
-         length_includes_head= True, clip_on = False)
-ax.arrow(0, nz, 0., -nz, fc='k', ec='k',lw = 2, 
-         head_width=0.1, head_length=0.2,
-         length_includes_head= True, clip_on = False)
-ax.get_xaxis().set_ticks([])
-ax.get_yaxis().set_ticks([])
-ax.set_ylabel('Y',fontweight="bold")
-ax.xaxis.set_label_position('top') 
-ax.set_xlabel('Z',fontweight="bold")
+plot_refs(plt,ny,nz)
 
-# Plot boundary circunference
-boundary = plt.Circle((ny*0.5,nz*0.5),radius=(ny-1)*0.5,linewidth=1,color='k',fill=False)
-fig = plt.gcf()
-fig.gca().add_artist(boundary)
 
 pdffig_cam = PdfPages( output_dir + "cam_" + outputname )
 
