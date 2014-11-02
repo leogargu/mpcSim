@@ -4,6 +4,7 @@
 # Leonor Garcia-Gurierrez	       #
 # May 2013			       #
 ########################################
+#Note: use -dNDEBUG to switch off assertions, if needed
 # C compiler and flags; compiler for MPI: mpicc (wrapper, recall NAG course). U
 # GNU compiler: gcc. Load modules for Intel (icc) and PGI
 CC = gcc
@@ -40,7 +41,7 @@ INPUT = input.dat
 	
 # Build the executable by linking the object files.
 $(EXE) : $(OBJECTS) 
-	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) 
+	$(LD) $(OBJECTS) $(LDFLAGS) -o $@  
 	#@echo "LDFLAGS="$(LDFLAGS) 
 	#@echo "CFLAGS="$(CFLAGS)
 

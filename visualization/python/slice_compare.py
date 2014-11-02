@@ -7,14 +7,14 @@
 
 import pandas as pd
 import numpy as np
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import sys
 import matplotlib.pyplot as plt
 from matplotlib.colors import from_levels_and_colors
 from matplotlib import ticker
 from matplotlib.backends.backend_pdf import PdfPages
 #On PdfPages:
-#http://stream.princeton.edu/AWCM/LIBRARIES/matplotlib-1.3.0/lib/matplotlib/backends/backend_pdf.py
-        
+#http://stream.princeton.edu/AWCM/LIBRARIES/matplotlib-1.3.0/lib/matplotlib/backends/backend_pdf.py        
         
 # Auxiliary functions
 def plot_refs(plt,ny,nz):
@@ -33,6 +33,9 @@ def plot_refs(plt,ny,nz):
 	fig = plt.gcf()
 	fig.gca().add_artist(boundary)	
 	return
+     
+# Interpolation setting
+interpolation_setting='nearest' #also possible: bilinear, bicubic
                
 # check number of calling arguments
 if len(sys.argv)<3:
@@ -124,12 +127,13 @@ masked_array = np.ma.array(difference, mask=np.isnan(difference))
 cmap.set_bad(color='gray')
 
 fig, ax = plt.subplots()
-im = ax.imshow(masked_array, vmin=vmin, vmax=vmax,cmap=cmap,interpolation='nearest',extent=[0,nz,0,ny])
+im = ax.imshow(masked_array, vmin=vmin, vmax=vmax,cmap=cmap,interpolation=interpolation_setting,extent=[0,nz,0,ny])
 cb=fig.colorbar(im,orientation='vertical')
 cb.locator = ticker.MaxNLocator(nbins=num_levels/3,symmetric=True,prune=None)
 cb.update_ticks()
 
 plot_refs(plt,ny,nz)
+
 
 #save averages plot to disk
 pdffig = PdfPages( output_dir + outputname )
@@ -145,6 +149,35 @@ metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ',
 #metadata['Producer']=
 pdffig.close()
 
+
+
+
+########################remove this
+
+original_cmap = plt.get_cmap('seismic')
+remapped_cmap = col.remappedColorMap(original_cmap, data=difference)
+
+#Plots:
+#(1) Original Cmap
+plt.subplot(2, 1, 1)
+test_plot2=plt.imshow(difference,cmap=plt.get_cmap('seismic') ,interpolation='bicubic')
+plt.title("Original Cmap")
+divider = make_axes_locatable(plt.gca())
+plt.colorbar(test_plot2,orientation='vertical', cax=divider.append_axes("right", size="5%", pad=0.05))
+
+#(2) Remapped Cmap
+plt.subplot(2, 1, 2)
+test_plot1=plt.imshow(difference,cmap=remapped_cmap ,interpolation='nearest')
+plt.title("Remapped Cmap")
+divider = make_axes_locatable(plt.gca())
+plt.colorbar(test_plot1,orientation='vertical', cax=divider.append_axes("right", size="5%", pad=0.05))
+
+plt.subplots_adjust(hspace=.3)
+
+#Saving plot
+plt.savefig("test_fig.png",bbox_inches='tight')
+
+
 ##########################################
 #auxiliary plot 1/2 (SAM data only)
 plt.figure(2)
@@ -154,7 +187,7 @@ my_cmap=plt.get_cmap('jet') #Also interesting: jet, spectral, rainbow
 masked_array = np.ma.array(averages_sam, mask=np.isnan(averages_sam))
 my_cmap.set_bad(color=empty_color_avgs)
 
-im_sam=plt.imshow(averages_sam,cmap=my_cmap,vmin=my_vmin,vmax=my_vmax,interpolation='bicubic',extent=[0,nz,0,ny])#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
+im_sam=plt.imshow(averages_sam,cmap=my_cmap,vmin=my_vmin,vmax=my_vmax,interpolation=interpolation_setting,extent=[0,nz,0,ny])#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
 plt.colorbar(im_sam,orientation='vertical')
 
 plot_refs(plt,ny,nz)
@@ -183,7 +216,7 @@ my_cmap=plt.get_cmap('jet') #Also interesting: jet, spectral, rainbow
 masked_array = np.ma.array(averages_cam, mask=np.isnan(averages_cam))
 my_cmap.set_bad(color=empty_color_avgs)
 
-im_cam=plt.imshow(averages_cam,cmap=my_cmap,vmin=my_vmin,vmax=my_vmax,interpolation='bicubic',extent=[0,nz,0,ny])#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
+im_cam=plt.imshow(averages_cam,cmap=my_cmap,vmin=my_vmin,vmax=my_vmax,interpolation=interpolation_setting,extent=[0,nz,0,ny])#or bilinear, nearest, bicubic; plt.get_cmap('seismic')
 plt.colorbar(im_cam,orientation='vertical')
 
 plot_refs(plt,ny,nz)

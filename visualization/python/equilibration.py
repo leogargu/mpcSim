@@ -1,7 +1,7 @@
 # Run this from the /python directory with:
 # >> python equilibration.py 
 #
-# This generates an image, momentum.png, of the evolution of total mmentum at each timestep in the simulation
+# This generates an image, momentum.pdf, of the evolution of total momentum at each timestep in the simulation
 
 
 
@@ -34,6 +34,7 @@ plt.title("Equilibration phase")
 pdffig = PdfPages( output_dir + outputname )
 plt.savefig(pdffig,format="pdf") 
 
+print "Saving into " + output_dir + outputname
 
 #add metadata to figure
 metadata = pdffig.infodict()
