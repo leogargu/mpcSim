@@ -14,7 +14,8 @@ directory_name=$(date +"%Y.%m.%d_%H.%M")
 mkdir data/$directory_name
 
 #Move the data, pbs files and images from /experiments/ to the new folder
-#mv ./experiments/* ./data/$directory_name
+mv ./experiments/* ./data/$directory_name/
+#ERROR: argument list is too long
 
 #write entry in /data/README.txt file with the name of the subfolder and a short title 
 #(comments can be added later by hand) 
