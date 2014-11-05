@@ -37,7 +37,7 @@ inline void CAM_average(char * filename, int first_file, int last_file, int stri
 	/*Read header of first file to obtain geometry data */
 	FILE * fp;
 	char intaschar[20];
-	char filename1[50]="";
+	char filename1[100]="";
 	strcpy(filename1,filename);
 	sprintf(intaschar, "_%d.dat", first_file);
 	strcat(filename1,intaschar);	
@@ -182,7 +182,7 @@ inline void SAM_average(char * filename, int first_file, int last_file, int stri
 	/*Read header of first file to obtain size of slice */
 	FILE * fp;	
 	char intaschar[20];
-	char filename1[50]="";
+	char filename1[100]="";
 	strcpy(filename1,filename);
 	sprintf(intaschar, "_%d.dat", first_file);
 	strcat(filename1,intaschar);
@@ -325,12 +325,12 @@ inline void CAM_to_SAM(char * path, char * filename)
 	FILE * fp;
 	FILE * fp_out;
 
-	char input_file[50]="";
+	char input_file[100]="";
 	strcpy(input_file,path);
 	strcat(input_file,filename);
 	strcat(input_file,".dat");
 	
-	char output_file[50]="";
+	char output_file[100]="";
 	strcpy(output_file,path);
 	
 	char tag[50]="SAMconverted_";

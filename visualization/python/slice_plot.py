@@ -16,7 +16,6 @@ import numpy as np
 import sys
 import matplotlib.pyplot as plt
 import matplotlib
-print matplotlib.__version__
 
 from matplotlib.colors import from_levels_and_colors
 from matplotlib import ticker
@@ -24,10 +23,29 @@ from matplotlib import ticker
 from matplotlib.backends.backend_pdf import PdfPages
 #On PdfPages:
 #http://stream.princeton.edu/AWCM/LIBRARIES/matplotlib-1.3.0/lib/matplotlib/backends/backend_pdf.py
-from slice_compare import plot_refs
+#from slice_compare import plot_refs (something didn't work well: error message is taken from slice_compare instead of slice_plot)
 
+# Auxiliary functions
+def plot_refs(plt,ny,nz):
+	#Beautify the axes and ticks, get them to conform to standard reference
+	ax=plt.gca()
+	ax.arrow(0, ny, nz, 0, fc='k', ec='k',lw = 2,head_width=0.1, head_length=0.2, length_includes_head= True, clip_on = False)
+	ax.arrow(0, nz, 0., -nz, fc='k', ec='k',lw = 2, head_width=0.1, head_length=0.2, length_includes_head= True, clip_on = False)
+	ax.get_xaxis().set_ticks([])
+	ax.get_yaxis().set_ticks([])
+	ax.set_ylabel('Y',fontweight="bold")
+	ax.xaxis.set_label_position('top') 
+	ax.set_xlabel('Z',fontweight="bold")
+	
+	# Plot boundary circunference
+	boundary = plt.Circle((ny*0.5,nz*0.5),radius=(ny-1)*0.5,linewidth=1,color='k',fill=False)
+	fig = plt.gcf()
+	fig.gca().add_artist(boundary)	
+	return
 
-
+# Interpolation setting
+interpolation_setting='nearest' #also possible: bilinear, bicubic
+ 
 
 #define input and output directory
 input_dir = './../../experiments/'
@@ -123,26 +141,8 @@ my_cmap.set_bad(color=empty_color_stats)
 im_samples=plt.imshow(samples,cmap=my_cmap,interpolation='nearest',extent=[0,nz,0,ny])
 plt.colorbar(im_samples, orientation='vertical')
 
-#Beautify the axes and ticks, get them to conform to standard reference
-#ax=plt.gca()
-#ax.arrow(0, ny, nz, 0, fc='k', ec='k',lw = 2,
-#         head_width=0.1, head_length=0.2,
-#         length_includes_head= True, clip_on = False)
-#ax.arrow(0, nz, 0., -nz, fc='k', ec='k',lw = 2, 
-#         head_width=0.1, head_length=0.2,
-#         length_includes_head= True, clip_on = False)
-#ax.get_xaxis().set_ticks([])
-#ax.get_yaxis().set_ticks([])
-#ax.set_ylabel('Y',fontweight="bold")
-#ax.xaxis.set_label_position('top') 
-#ax.set_xlabel('Z',fontweight="bold")
 
-# Plot boundary circunference
-#boundary = plt.Circle((ny*0.5,nz*0.5),radius=(ny-1)*0.5,linewidth=1,color='k',fill=False)
-#fig = plt.gcf()
-#fig.gca().add_artist(boundary)
-
-plor_refs(plt,ny,nz)
+plot_refs(plt,ny,nz)
 
 # Save sample statistics plot to disk
 pdffig_samples = PdfPages( output_dir + outputname_samples )
@@ -163,33 +163,18 @@ pdffig_samples.close()
 
 
 ##########################################
-#plot averages
+#plot averages or snapshot
 plt.figure(2)
 my_cmap=plt.get_cmap('jet') #Also interesting: jet, spectral, rainbow 
 masked_array = np.ma.array(averages, mask=np.isnan(averages))
 my_cmap.set_bad(color=empty_color_avgs)
 
-im_averages=plt.imshow(averages,cmap=my_cmap,vmin=data_min,vmax=data_max,interpolation='bicubic', extent=[0,nz,0,ny])#or bilinear, nearest, bicubic
+im_averages=plt.imshow(averages,cmap=my_cmap,vmin=data_min,vmax=data_max,interpolation=interpolation_setting, extent=[0,nz,0,ny])#or bilinear, nearest, bicubic
 plt.colorbar(im_averages,orientation='vertical')
 
 #Beautify the axes and ticks, get them to conform to standard reference
-ax=plt.gca()
-ax.arrow(0, ny, nz, 0, fc='k', ec='k',lw = 2,
-         head_width=0.1, head_length=0.2,
-         length_includes_head= True, clip_on = False)
-ax.arrow(0, nz, 0., -nz, fc='k', ec='k',lw = 2, 
-         head_width=0.1, head_length=0.2,
-         length_includes_head= True, clip_on = False)
-ax.get_xaxis().set_ticks([])
-ax.get_yaxis().set_ticks([])
-ax.set_ylabel('Y',fontweight="bold")
-ax.xaxis.set_label_position('top') 
-ax.set_xlabel('Z',fontweight="bold")
+plot_refs(plt,ny,nz)
 
-# Plot boundary circunference
-boundary = plt.Circle((ny*0.5,nz*0.5),radius=(ny-1)*0.5,linewidth=1,color='k',fill=False)
-fig = plt.gcf()
-fig.gca().add_artist(boundary)
 
 #save averages plot to disk, prepare metadata object first
 pdffig = PdfPages( output_dir + outputname )
@@ -200,7 +185,10 @@ metadata = pdffig.infodict()
 metadata['Title'] = 'Data plotted =' + sys.argv[1] #input_file 
 metadata['Author'] = 'Script used to plot this = slice_plot.py'
 metadata['Subject']= 'Info on samples(SAM)/particles(CAM) plotted in '+outputname_samples
-metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
+if is_average:
+	metadata['Keywords']= 'Data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
+if is_snapshot:
+	metadata['Keywords']= 'Data is a snapshot taken at timestep='+str(timestep)
 #metadata['Creator'] = 
 #metadata['Producer']=
 
@@ -211,16 +199,3 @@ metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ',
 #In addition, there is CReationDate and ModDate
 
 pdffig.close()
-
-##########################################
-
-#--------------------
-#plot 3d wireframe
-#--------------------
-#X = np.arange(0, nz)
-#Y = np.arange(0, ny)
-#X, Y = np.meshgrid(X, Y)
-#fig = plt.figure()
-#ax = fig.gca(projection='3d')
-#surf = ax.plot_wireframe(Y, X, data)
-#ax.view_init(30, 0)

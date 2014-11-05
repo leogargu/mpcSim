@@ -38,8 +38,8 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 	
-	char directory_name[70]="./../experiments/";
-	char filename[70]="";
+	char directory_name[100]="./../experiments/";
+	char filename[100]="";
 	strcpy(filename,directory_name);
 	strcat(filename,argv[2]);
 	

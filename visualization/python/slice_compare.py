@@ -149,36 +149,7 @@ metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ',
 #metadata['Producer']=
 pdffig.close()
 
-
-
-
-########################remove this
-
-original_cmap = plt.get_cmap('seismic')
-remapped_cmap = col.remappedColorMap(original_cmap, data=difference)
-
-#Plots:
-#(1) Original Cmap
-plt.subplot(2, 1, 1)
-test_plot2=plt.imshow(difference,cmap=plt.get_cmap('seismic') ,interpolation='bicubic')
-plt.title("Original Cmap")
-divider = make_axes_locatable(plt.gca())
-plt.colorbar(test_plot2,orientation='vertical', cax=divider.append_axes("right", size="5%", pad=0.05))
-
-#(2) Remapped Cmap
-plt.subplot(2, 1, 2)
-test_plot1=plt.imshow(difference,cmap=remapped_cmap ,interpolation='nearest')
-plt.title("Remapped Cmap")
-divider = make_axes_locatable(plt.gca())
-plt.colorbar(test_plot1,orientation='vertical', cax=divider.append_axes("right", size="5%", pad=0.05))
-
-plt.subplots_adjust(hspace=.3)
-
-#Saving plot
-plt.savefig("test_fig.png",bbox_inches='tight')
-
-
-##########################################
+#========================================
 #auxiliary plot 1/2 (SAM data only)
 plt.figure(2)
 
