@@ -3,7 +3,7 @@
 #
 #
 # Then, run this from the /python directory with:
-# >> python slice_plot.py <Name of file in /experiments directory, with extension> <(optional) Name of output plot (without the extension)>
+# >> python slice_plot.py <Name of file in /experiments directory, with extension> <value of a><(optional) Name of output plot (without the extension)>
 # If the name for the output plot is omitted, the result is saved as "output.png"
 # a plot containing information on the number of samples used (for SAM averages) or number of particles across samples (for CAM averages)
 # is also plotted and saved in "output_samples.png" , or the corresponding given name with the suffix "_samples.png".
@@ -24,6 +24,12 @@ from matplotlib.backends.backend_pdf import PdfPages
 #On PdfPages:
 #http://stream.princeton.edu/AWCM/LIBRARIES/matplotlib-1.3.0/lib/matplotlib/backends/backend_pdf.py
 #from slice_compare import plot_refs (something didn't work well: error message is taken from slice_compare instead of slice_plot)
+
+
+#Get the radial helpers
+sys.path.insert(0, './../../statistics/')
+import radial_helpers
+
 
 # Auxiliary functions
 def plot_refs(plt,ny,nz):
@@ -56,24 +62,28 @@ empty_color_stats='black'
 empty_color_avgs='white'
 
 #check health of input arguments and get header
-if len(sys.argv)>=2 and sys.argv[1]!='':
+if len(sys.argv)>=3 and sys.argv[1]!='':
 	
 	input_file=input_dir + sys.argv[1];
 	
 	fh=open(input_file,'r')
-	if len(sys.argv)==3:
-		outputname=sys.argv[2]+".pdf" #change the extension if required
-		outputname_samples=sys.argv[2]+"_samples.pdf"
+	if len(sys.argv)==4:
+		outputname=sys.argv[3]+".pdf" #change the extension if required
+		outputname_samples=sys.argv[3]+"_samples.pdf"
+		outputname_densities=sys.argv[3]+"_density.pdf"
 	else:
 		outputname="output.pdf"
 		outputname_samples="output_samples.pdf"
-		print "Plots will be saved in output.pdf and output_samples.pdf\n"
+		outputname_densities="output_density.pdf"
+		print "Plots will be saved in output.pdf, output_samples.pdf, output_density.pdf\n"
 else:
 	print "Call as: \n>>python slice_plot.py <name of av file to plot, in /experiments> <(optional) name of output plot, without the extension>"
 	sys.exit(1)
 	
 	
-	
+a=float(sys.argv[2]);
+
+
 header=fh.readline()
 fh.close()
 
@@ -113,25 +123,26 @@ data = pd.read_table(input_file,sep='\t',skiprows=1,skipinitialspace=True,header
 
 #separate columns
 averages=data.values[:,1]
-samples=data.values[:,0]
+num_particles=data.values[:,0]
 
 data_min = np.nanmin(averages)
 data_max = np.nanmax(averages)
 
 #in here, find the max and min of samples, and print to screen
 if is_average:
-	print "Maximum number of samples(SAM)/particles(CAM) used: ", int(max(samples))
-	samples_aux=sorted(set(samples)) #remove duplicated entries, return a sorted list
+	print "Maximum number of samples(SAM)/particles(CAM) used: ", int(max(num_particles))
+	samples_aux=sorted(set(num_particles)) #remove duplicated entries, return a sorted list
 	print "Minimum number of samples(SAM)/particles(CAM) used: ", int(samples_aux[1])
 
 #prepare data for plotting
-samples=samples.reshape(ny,nz)
+samples=num_particles.reshape(ny,nz)
 averages=averages.reshape(ny,nz)
 
 ##########################################
 #The following two sections could be rewritten as 1-2 functions?
 ##########################################
 #plot samples statistics
+plt.figure(1)
 samples[samples==0] = np.nan
 
 my_cmap=plt.get_cmap('Greens') #Also interesting: jet, spectral, rainbow 
@@ -150,7 +161,7 @@ plt.savefig( pdffig_samples, format="pdf" )
 
 #add metadata to figure
 metadata = pdffig_samples.infodict()
-metadata['Title'] = 'Data plotted =' + sys.argv[1] #input_file 
+metadata['Title'] = 'Data plotted =' + input_file
 metadata['Author'] = 'Script used to plot this = slice_plot.py'
 metadata['Subject']= 'Info on averages plotted in '+outputname
 if is_average:
@@ -161,10 +172,42 @@ if is_snapshot:
 #metadata['Producer']=
 pdffig_samples.close()
 
+##########################################
+#plot densities
+plt.figure(2)
+L = ny*a; #or nz
+R = 0.5*(L-a)
+volumes = radial_helpers.find_seg_quant(a,L,ny,nz,R,'volume')
+particle_densities = np.divide(num_particles, volumes)
+p_density = particle_densities.reshape(ny,nz)
+
+my_cmap = plt.get_cmap('nipy_spectral') #Also interesting: gnuplot2, spectral, rainbow variants 
+density_plot = plt.imshow(p_density,cmap=my_cmap,interpolation='nearest',extent=[0,nz,0,ny])
+plt.colorbar(density_plot, orientation='vertical')
+
+plot_refs(plt,ny,nz)
+
+# Save sample statistics plot to disk
+pdffig_density = PdfPages( output_dir + outputname_densities )
+plt.savefig( pdffig_density, format="pdf" )
+
+#add metadata to figure
+metadata = pdffig_density.infodict()
+metadata['Title'] = 'Particle densities. Data plotted =' + input_file
+metadata['Author'] = 'Script used to plot this = slice_plot.py and radia_helpers.py'
+metadata['Subject']= 'Info on averages plotted in '+outputname
+if is_average:
+	metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
+if is_snapshot:
+	metadata['Keywords']='Data is a snapshot taken at timestep='+str(timestep)
+metadata['Creator'] = 'Particle densities calculated for each collicion cell as: num particles/volume inside lumen'
+#metadata['Producer']=
+pdffig_density.close()
+
 
 ##########################################
 #plot averages or snapshot
-plt.figure(2)
+plt.figure(3)
 my_cmap=plt.get_cmap('jet') #Also interesting: jet, spectral, rainbow 
 masked_array = np.ma.array(averages, mask=np.isnan(averages))
 my_cmap.set_bad(color=empty_color_avgs)
@@ -182,7 +225,7 @@ plt.savefig( pdffig, format="pdf")#output_dir + outputname )
 
 #add metadata to figure
 metadata = pdffig.infodict()
-metadata['Title'] = 'Data plotted =' + sys.argv[1] #input_file 
+metadata['Title'] = 'Data plotted =' + input_file 
 metadata['Author'] = 'Script used to plot this = slice_plot.py'
 metadata['Subject']= 'Info on samples(SAM)/particles(CAM) plotted in '+outputname_samples
 if is_average:
