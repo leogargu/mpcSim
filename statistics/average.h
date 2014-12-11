@@ -41,7 +41,7 @@ inline void CAM_average(char * filename, int first_file, int last_file, int stri
 	strcpy(filename1,filename);
 	sprintf(intaschar, "_%d.dat", first_file);
 	strcat(filename1,intaschar);	
-	
+	int eh;
 	
 	fp=fopen(filename1,"r"); 
 	if( fp == NULL ){ perror("CAM_average: Error while opening the file.\n"); exit(EXIT_FAILURE);}
@@ -51,8 +51,11 @@ inline void CAM_average(char * filename, int first_file, int last_file, int stri
 	int cell_idx_start=0 ,cell_idx_end= 0;
 	
 	/* Reading header of data file */
-	fscanf( fp, "%d \t %d \t %d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &cell_idx_start, &cell_idx_end, &step);
-
+	eh = fscanf( fp, "%d \t %d \t %d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &cell_idx_start, &cell_idx_end, &step);
+	if( eh !=6 ){
+		fprintf(stderr,"CAM_average: Error reading the file header\nAborting...\n");
+		exit(EXIT_FAILURE);
+	}
 		
 	/* Identify volume to study (set of collision cells) */
 	int num_cells = cell_idx_end - cell_idx_start + 1;
@@ -89,13 +92,20 @@ inline void CAM_average(char * filename, int first_file, int last_file, int stri
 		
 		for(j=0;j<num_cells;j++)
 		{
-			fscanf(fp, "%lf", &row_length);
-			
+			eh = fscanf(fp, "%lf", &row_length);
+			if( eh!=1 ){
+				fprintf(stderr,"CAM_average: Error processing file\nAborting...\n");
+				exit(EXIT_FAILURE);
+			}
 			part_num[j] += (int)row_length;
 		
 			for(k=1; k<=(int)row_length; k++)
 			{
-				fscanf(fp, "%lf", &aux);
+				eh = fscanf(fp, "%lf", &aux);
+				if( eh!=1 ){
+					fprintf(stderr,"CAM_average: Error processing file\nAborting...");
+					exit(EXIT_FAILURE);
+				}
 				average[j]+=aux;
 			}
 			
@@ -123,8 +133,11 @@ inline void CAM_average(char * filename, int first_file, int last_file, int stri
 		if( fp == NULL ){ perror("CAM_average: Error while opening the file.\n"); exit(EXIT_FAILURE);}
 
 		/* read fist line to set the pointer in the right position. Checking of parameters for robustness is possible here */
-		fscanf( fp, "%d \t %d \t %d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &cell_idx_start, &cell_idx_end, &step);
-				
+		eh = fscanf( fp, "%d \t %d \t %d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &cell_idx_start, &cell_idx_end, &step);
+		if( eh !=6 ){
+			fprintf(stderr,"CAM_average: Error reading header of file.\nAborting...");
+			exit(EXIT_FAILURE);
+		}
 	}
 	
 	
@@ -132,8 +145,9 @@ inline void CAM_average(char * filename, int first_file, int last_file, int stri
 	strcpy(filename1,filename);
 	strcat(filename1,"_CAM_averaged.dat");
 	
-	fopen(filename1,"w");
-	
+	fp=fopen(filename1,"w");
+	if( fp == NULL ){ perror("CAM_average: Error while opening the file.\n"); exit(EXIT_FAILURE);}
+
 	/* Export expanded header */
 	fprintf( fp, "%d \t %d \t %d \t %d \t %d \t %d \t %d \t %d \n", nx, ny, nz, cell_idx_start, cell_idx_end, first_file, stride, actual_last_file);
 	for(i=0;i<num_cells;i++)
@@ -178,7 +192,7 @@ inline void CAM_average(char * filename, int first_file, int last_file, int stri
 ////////////////////////////////////////////////////////////////////////////////////////
 inline void SAM_average(char * filename, int first_file, int last_file, int stride, double factor, int verbose )
 {
-	int flag;
+	int flag, eh;
 	/*Read header of first file to obtain size of slice */
 	FILE * fp;	
 	char intaschar[20];
@@ -194,8 +208,11 @@ inline void SAM_average(char * filename, int first_file, int last_file, int stri
 	long int step=0;
 	int cell_idx_start=0 ,cell_idx_end= 0;
 	
-	fscanf( fp, "%d \t %d \t %d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &cell_idx_start, &cell_idx_end, &step);
-	
+	eh = fscanf( fp, "%d \t %d \t %d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &cell_idx_start, &cell_idx_end, &step);
+	if( eh!=6 ){
+		fprintf(stderr,"SAM_average: Error reading header of file.\nAborting...");
+		exit(EXIT_FAILURE);
+	}
 	
 	/* Identify volume to study (set of collision cells) */
 	int num_cells = cell_idx_end - cell_idx_start + 1;
@@ -285,8 +302,10 @@ inline void SAM_average(char * filename, int first_file, int last_file, int stri
 	/* Complete the average and export to file */
 	strcpy(filename1,filename);
 	strcat(filename1,"_SAM_averaged.dat");
-	fopen(filename1,"w");
 	
+	fp=fopen(filename1,"w");
+	if( fp == NULL ){ perror("CAM_average: Error while opening the file.\n"); exit(EXIT_FAILURE);}
+
 	/* Export extended header */
 	fprintf( fp, "%d \t %d \t %d \t %d \t %d \t %d \t %d \t %d\n", nx, ny, nz, cell_idx_start, cell_idx_end, first_file, stride, actual_last_file);
 		
@@ -321,6 +340,7 @@ inline void SAM_average(char * filename, int first_file, int last_file, int stri
 inline void CAM_to_SAM(char * path, char * filename)
 {	
 	int flag, i,j;
+	int eh;
 
 	FILE * fp;
 	FILE * fp_out;
@@ -350,7 +370,11 @@ inline void CAM_to_SAM(char * path, char * filename)
 	long int step=0;
 	int cell_idx_start=0 ,cell_idx_end= 0;
 	
-	fscanf( fp, "%d \t %d \t %d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &cell_idx_start, &cell_idx_end, &step);
+	eh = fscanf( fp, "%d \t %d \t %d \t %d \t %d \t %ld \n", &nx, &ny, &nz, &cell_idx_start, &cell_idx_end, &step);
+	if( eh !=6 ){
+		fprintf(stderr,"CAM_to_SAM:Error reading header file.\nAborting...\n");
+		exit(EXIT_FAILURE);
+	}
 	fprintf( fp_out, "%d \t %d \t %d \t %d \t %d \t %ld \n", nx, ny, nz, cell_idx_start, cell_idx_end, step);
 	
 	
@@ -365,12 +389,20 @@ inline void CAM_to_SAM(char * path, char * filename)
 	for(i=0; i<num_cells; i++)
 	{
 		/* get local density */
-		fscanf(fp, "%lf", &row_length);
+		eh = fscanf(fp, "%lf", &row_length);
+		if( eh !=1 ){
+			fprintf(stderr,"CAM_to_SAM: error reading file.\nAborting...\n");
+			exit(EXIT_FAILURE);
+		}
 		/* export local density */
 		fprintf(fp_out,"%.0lf\t", row_length);
 		for(j=1; j<=row_length; j++)
 		{
-			fscanf(fp,"%lf",&aux);
+			eh = fscanf(fp,"%lf",&aux);
+			if( eh !=1 ){
+				fprintf(stderr,"CAM_to_SAM: error reading file.\nAborting...\n");
+				exit(EXIT_FAILURE);
+			}
 			average += aux;
 		}
 		if( row_length !=0 )

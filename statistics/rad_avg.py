@@ -50,25 +50,25 @@ def sign_to_str(p):
 ##############################################
 
 # check number of calling arguments
-if len(sys.argv)<5:
-	print "call as: \n>>python rad_avg.py <name of data file in /experiments/> <Value of a in the simulation> <Value of L in the simulation> <Number of circunferences over which to perform the radial average><(Optional) Name of the output figure>\n"
+if len(sys.argv)<6:
+	print "call as: \n>>python rad_avg.py <dir, relative to calling directory> <name of data file> <Value of a in the simulation> <Value of L in the simulation> <Number of circunferences over which to perform the radial average><(Optional) Name of the output figure>\n"
 	sys.exit(1)
 
 
 #define input and output directory
-input_dir = './../experiments/'
+input_dir = sys.argv[1]# './../experiments/'
 output_dir = input_dir
 
 #Get arguments
-input_file = sys.argv[1];
-a = float(sys.argv[2]);
-L = float(sys.argv[3]);
+input_file = sys.argv[2];
+a = float(sys.argv[3]);
+L = float(sys.argv[4]);
 R = (L-a)*0.5;
 L_half = 0.5*L;
-num_points = int(sys.argv[4])/2;
-if len(sys.argv)==6:
-	outputname=sys.argv[5]+".pdf" #change the extension if required
-	outputname_density=sys.argv[5]+"_density.pdf"
+num_points = int(sys.argv[5])/2;
+if len(sys.argv)==7:
+	outputname=sys.argv[6]+".pdf" #change the extension if required
+	outputname_density=sys.argv[6]+"_density.pdf"
 else:
 	outputname="output.pdf"
 	outputname_density = 'output_density.pdf'
@@ -82,11 +82,17 @@ header=fh.readline()
 fh.close()
 
 # process dimensions of simulation box
-dimensions=header.split('\t')[:3]
+dimensions=header.split('\t')[:8]
 nx=int(dimensions[0])
 ny=int(dimensions[1])
 nz=int(dimensions[2])
 
+first_file = int(dimensions[5])		#first datafile number used in the average that generated the datafile plotted here 
+stride = int(dimensions[6])		#stride used when calculating the average datafile plotted here
+last_file = int(dimensions[7])	
+	
+num_samples = ((last_file-first_file)/stride)+1;
+assert isinstance(num_samples,int), "rad_avg.py.py: error calculating number of samples"
 
 #get slice data
 data = pd.read_table(input_dir+input_file,sep='\t',skiprows=1,skipinitialspace=True,header=None);
@@ -115,8 +121,12 @@ for x in fit_x_values:
     
    
 print "R^2 = ", R2
-print "Slip = ", np.array(y_vals).min()
+print "Slip (from data) = ", np.array(y_vals).min()
+print "Slip (from fit) =", fit(0.5*a)
+print "Fit: p[1]="  + str(fit[0]) + ", p[x]= "+ str(fit[1])+', p[x^2]= '+ str(fit[2])
 
+#For latex:
+print num_samples , " & " , '%.6f'%fit[0] , " & ", '%.6f'%fit[1], ' & ', '%.6f'%fit[2], " & " , '%.6f'%R2 , " \\\\"
     
 #Plotting
 plt.figure(1)
@@ -146,8 +156,8 @@ metadata['Title'] = 'Data plotted =' + input_dir + input_file #input_file
 metadata['Author'] = 'Script used to plot this = rad_avg.py.py'
 
 
-metadata['Subject']= ' Radial averages and least squares parabolic fit = '+ str(fit[0]) + sign_to_str(fit[1]) +str(fit[1])+'x'+ sign_to_str(fit[2]) + str(fit[2])+'x^2'
-metadata['Keywords']= 'R^2 = '+ str(R2)
+metadata['Subject']= ' Radial averages and least squares parabolic fit = '+ str(fit[0]) + sign_to_str(fit[1]) +str(abs(fit[1]))+'x'+ sign_to_str(fit[2]) + str(abs(fit[2]))+'x^2'
+metadata['Keywords']= 'R^2 = '+ str(R2)+' , Slip (fit)= '+str(fit(0.5*a))+', Slip (data)= '+str(np.array(y_vals).min())
 #metadata['Creator'] = 
 #metadata['Producer']=
 
@@ -160,11 +170,11 @@ pdffig.close()
 #Now the particle densities
 plt.figure(2)
 
-volumes = radial_helpers.find_seg_quant(a,L,ny,nz,R,'volume')
-particle_densities = np.divide(num_particles, volumes)
-
-
-
+volumes = radial_helpers.find_seg_quant(a,L,ny,nz,R,'volume')	
+num_particles_cell = np.divide(num_particles,num_samples)
+particle_densities = np.divide(num_particles_cell, volumes)
+	
+	
 #Get radial average points
 y_values = []
 x_vals = []

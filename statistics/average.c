@@ -15,13 +15,14 @@ int main(int argc, char **argv) {
 
 	/*
 	argv[0] is the program name
-	argv[1] is the type of average: CAM or SAM
-	argv[2] is name of files
-	argv[3] is the index of the first file to be processed
-	argv[4] is the index of the last file to be processed
-	argv[5] is the skip parameter/stride (e.g. if it is 1=take all files, 2=take every other file, etc.)
-	argv[6] is a factor (see note above)
-	argv[7] is 1 or 0 (verbose mode)
+	argv[1] is the input and output directory, relative to the calling folder (e.g. ./../data/2014..../ or ./../experiments/ )
+	argv[2] is the type of average: CAM or SAM
+	argv[3] is name of files
+	argv[4] is the index of the first file to be processed
+	argv[5] is the index of the last file to be processed
+	argv[6] is the skip parameter/stride (e.g. if it is 1=take all files, 2=take every other file, etc.)
+	argv[7] is a factor (see note above)
+	argv[8] is 1 or 0 (verbose mode)
 	*/
 	
 	printf("WARNING: average.c only calculates CAM or SAM averages of scalar quantities.\n");
@@ -30,31 +31,34 @@ int main(int argc, char **argv) {
 	/*---------------------------*/
 	/* Main  		     */
 	/*---------------------------*/
-	if(argc!=8)
+	if(argc!=9)
 	{
 		printf("Wrong number of arguments. Call as:\n");
-		printf("./average <av.type> <filename> <first file index> <last file index> <factor> <verbose>\n<av.type>\tSAM, CAM or CAM2SAM\n<filename>\tdatafile basic name in averages folder (do not write path)\n<first file index>\t Index of first file (inclusive)\n<last file index>\t Index of last file (inclusive)\n<stride>\t number of files to skip after each sample\n<factor>\tcorrection factor\n<verbose>\tverbose mode 1/0\n");
+		printf("./average <av.type> <dir> <filename> <first file index> <last file index> <factor> <verbose>\n<av.type>\tSAM, CAM or CAM2SAM\n<dir>\tInput and output directory, relative to teh calling directory\n<filename>\tdatafile basic name in averages folder (do not write path)\n<first file index>\t Index of first file (inclusive)\n<last file index>\t Index of last file (inclusive)\n<stride>\t number of files to skip after each sample\n<factor>\tcorrection factor\n<verbose>\tverbose mode 1/0\n");
 		printf("Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
 	
-	char directory_name[100]="./../experiments/";
+	
+	char directory_name[100]="";
+	strcat(directory_name,argv[2]);
 	char filename[100]="";
 	strcpy(filename,directory_name);
-	strcat(filename,argv[2]);
+	strcat(filename,argv[3]);
+	
 	
 	double number;
-	number = strtod(argv[6], NULL);
+	number = strtod(argv[7], NULL);
 	
-	int stride = atoi(argv[5]);
+	int stride = atoi(argv[6]);
 	
 	if(strcmp(argv[1], "CAM")==0)
 	{
-		CAM_average(filename, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), 1.0/number, atoi(argv[7]) ); //strtol + error checking desirable here
+		CAM_average(filename, atoi(argv[4]), atoi(argv[5]), atoi(argv[6]), 1.0/number, atoi(argv[8]) ); //strtol + error checking desirable here
 
 	}else if(strcmp(argv[1], "SAM")==0)
 	{
-		SAM_average(filename, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), 1.0/number, atoi(argv[7]));
+		SAM_average(filename, atoi(argv[4]), atoi(argv[5]), atoi(argv[6]), 1.0/number, atoi(argv[8]));
 
 	}else if(strcmp(argv[1], "CAM2SAM")==0)
 	{
@@ -62,13 +66,13 @@ int main(int argc, char **argv) {
 		char filename_numbered[50]="";
 		char intaschar[20];
 		int i, first, last, verbose;
-		first = atoi(argv[3]);
-		last = atoi(argv[4]);
-		verbose = atoi(argv[7]);
+		first = atoi(argv[4]);
+		last = atoi(argv[5]);
+		verbose = atoi(argv[8]);
 		
 		for(i=first; i<=last; i=i+stride)
 		{
-			strcpy(filename_numbered,argv[2]);		
+			strcpy(filename_numbered,argv[3]);		
 			sprintf(intaschar, "_%d", i);
 			strcat(filename_numbered,intaschar);
 						

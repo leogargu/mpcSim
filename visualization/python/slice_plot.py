@@ -54,7 +54,7 @@ interpolation_setting='nearest' #also possible: bilinear, bicubic
  
 
 #define input and output directory
-input_dir = './../../experiments/'
+input_dir = sys.argv[1] # './../../experiments/'
 output_dir = input_dir
 
 # Define color of empty cells
@@ -62,26 +62,26 @@ empty_color_stats='black'
 empty_color_avgs='white'
 
 #check health of input arguments and get header
-if len(sys.argv)>=3 and sys.argv[1]!='':
+if len(sys.argv)>=4 and sys.argv[2]!='':
 	
-	input_file=input_dir + sys.argv[1];
+	input_file=input_dir + sys.argv[2];
 	
 	fh=open(input_file,'r')
-	if len(sys.argv)==4:
-		outputname=sys.argv[3]+".pdf" #change the extension if required
-		outputname_samples=sys.argv[3]+"_samples.pdf"
-		outputname_densities=sys.argv[3]+"_density.pdf"
+	if len(sys.argv)==5:
+		outputname=sys.argv[4]+".pdf" #change the extension if required
+		outputname_samples=sys.argv[4]+"_samples.pdf"
+		outputname_densities=sys.argv[4]+"_density.pdf"
 	else:
 		outputname="output.pdf"
 		outputname_samples="output_samples.pdf"
 		outputname_densities="output_density.pdf"
 		print "Plots will be saved in output.pdf, output_samples.pdf, output_density.pdf\n"
 else:
-	print "Call as: \n>>python slice_plot.py <name of av file to plot, in /experiments> <(optional) name of output plot, without the extension>"
+	print "Call as: \n>>python slice_plot.py <dir> <name of av file to plot, in /experiments> <value of a> <(optional) name of output plot, without the extension>"
 	sys.exit(1)
 	
 	
-a=float(sys.argv[2]);
+a=float(sys.argv[3]);
 
 
 header=fh.readline()
@@ -165,7 +165,7 @@ metadata['Title'] = 'Data plotted =' + input_file
 metadata['Author'] = 'Script used to plot this = slice_plot.py'
 metadata['Subject']= 'Info on averages plotted in '+outputname
 if is_average:
-	metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
+	metadata['Keywords']= 'Data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
 if is_snapshot:
 	metadata['Keywords']='Data is a snapshot taken at timestep='+str(timestep)
 #metadata['Creator'] = 
@@ -174,46 +174,98 @@ pdffig_samples.close()
 
 ##########################################
 #plot densities
-plt.figure(2)
-L = ny*a; #or nz
-R = 0.5*(L-a)
-volumes = radial_helpers.find_seg_quant(a,L,ny,nz,R,'volume')
-particle_densities = np.divide(num_particles, volumes)
-p_density = particle_densities.reshape(ny,nz)
+if 'CAM' in sys.argv[2]:
+	#Sanity check
+	assert is_average, 'slice_plot.py: wrong average file name'
+	
+	plt.figure(2)
+	L = ny*a; #or nz
+	R = 0.5*(L-a)
+	volumes = radial_helpers.find_seg_quant(a,L,ny,nz,R,'volume')
+	num_samples = ((last_file-first_file)/stride)+1;
+	assert isinstance(num_samples,int), "slice_plot.py: error calculating number of samples"
+	
+	num_particles_cell = np.divide(num_particles,num_samples)
+	particle_densities = np.divide(num_particles_cell, volumes)
+	
+	p_density = particle_densities.reshape(ny,nz)
 
-my_cmap = plt.get_cmap('nipy_spectral') #Also interesting: gnuplot2, spectral, rainbow variants 
-density_plot = plt.imshow(p_density,cmap=my_cmap,interpolation='nearest',extent=[0,nz,0,ny])
-plt.colorbar(density_plot, orientation='vertical')
+	my_cmap = plt.get_cmap('nipy_spectral') #Also interesting: gnuplot2, spectral, rainbow variants 
+	density_plot = plt.imshow(p_density,cmap=my_cmap,interpolation='nearest',extent=[0,nz,0,ny])
+	plt.colorbar(density_plot, orientation='vertical')
 
-plot_refs(plt,ny,nz)
+	plot_refs(plt,ny,nz)
 
-# Save sample statistics plot to disk
-pdffig_density = PdfPages( output_dir + outputname_densities )
-plt.savefig( pdffig_density, format="pdf" )
+	# Save sample statistics plot to disk
+	pdffig_density = PdfPages( output_dir + outputname_densities )
+	plt.savefig( pdffig_density, format="pdf" )
 
-#add metadata to figure
-metadata = pdffig_density.infodict()
-metadata['Title'] = 'Particle densities. Data plotted =' + input_file
-metadata['Author'] = 'Script used to plot this = slice_plot.py and radia_helpers.py'
-metadata['Subject']= 'Info on averages plotted in '+outputname
-if is_average:
+	#add metadata to figure
+	metadata = pdffig_density.infodict()
+	metadata['Title'] = 'Particle densities. Data plotted =' + input_file
+	metadata['Author'] = 'Script used to plot this = slice_plot.py and radia_helpers.py'
+	metadata['Subject']= 'Info on averages plotted in '+outputname
 	metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
-if is_snapshot:
-	metadata['Keywords']='Data is a snapshot taken at timestep='+str(timestep)
-metadata['Creator'] = 'Particle densities calculated for each collicion cell as: num particles/volume inside lumen'
-#metadata['Producer']=
-pdffig_density.close()
+	
+	#Temporary?###############################
+	plt.figure(3)
+	#volumes = radial_helpers.find_seg_quant(a,L,ny,nz,R,'volume')
+	#num_samples = ((last_file-first_file)/stride)+1;
+	#assert isinstance(num_samples,int), "slice_plot.py: error calculating number of samples"
+	
+	num_particles_cell = np.divide(num_particles,num_samples)
+	#particle_densities = np.divide(num_particles_cell, volumes)
+	
+	p_density = num_particles_cell.reshape(ny,nz)
+
+	my_cmap = plt.get_cmap('nipy_spectral') #Also interesting: gnuplot2, spectral, rainbow variants 
+	density_plot = plt.imshow(p_density,cmap=my_cmap,interpolation='nearest',extent=[0,nz,0,ny])
+	plt.colorbar(density_plot, orientation='vertical')
+
+	plot_refs(plt,ny,nz)
+
+	# Save sample statistics plot to disk
+	pdffig_density = PdfPages( output_dir + sys.argv[4]+"_particle_density.pdf" )
+	plt.savefig( pdffig_density, format="pdf" )
+
+	#add metadata to figure
+	#metadata = pdffig_density.infodict()
+	#metadata['Title'] = 'Particle densities. Data plotted =' + input_file
+	#metadata['Author'] = 'Script used to plot this = slice_plot.py and radia_helpers.py'
+	#metadata['Subject']= 'Info on averages plotted in '+outputname
+	#metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
+	#####################################
+	pdffig_density.close()
 
 
 ##########################################
 #plot averages or snapshot
-plt.figure(3)
-my_cmap=plt.get_cmap('jet') #Also interesting: jet, spectral, rainbow 
-masked_array = np.ma.array(averages, mask=np.isnan(averages))
-my_cmap.set_bad(color=empty_color_avgs)
+num_levels = 40
+vmin, midpoint, vmax = np.nanmin(averages), 0.0,  np.nanmax(averages)
+levels = np.linspace(vmin, vmax, num_levels)
+midp = np.mean(np.c_[levels[:-1], levels[1:]], axis=1)
+vals = np.interp(midp, [vmin, midpoint, vmax], [0, 0.5, 1])
+colors = plt.cm.seismic(vals)
+cmap, norm = from_levels_and_colors(levels, colors)  #won't use the norm
 
-im_averages=plt.imshow(averages,cmap=my_cmap,vmin=data_min,vmax=data_max,interpolation=interpolation_setting, extent=[0,nz,0,ny])#or bilinear, nearest, bicubic
-plt.colorbar(im_averages,orientation='vertical')
+masked_array = np.ma.array(averages, mask=np.isnan(averages))
+cmap.set_bad(color='black')
+plt.figure(4)
+fig, ax = plt.subplots()
+im_averages = ax.imshow(masked_array, vmin=vmin, vmax=vmax,cmap=cmap,interpolation='nearest',extent=[0,nz,0,ny])
+cb=fig.colorbar(im_averages,orientation='vertical')
+cb.locator = ticker.MaxNLocator(nbins=num_levels/3,symmetric=True,prune=None)
+cb.update_ticks()
+
+#################
+
+#plt.figure(3)
+#my_cmap=plt.get_cmap('jet') #Also interesting: jet, spectral, rainbow 
+#masked_array = np.ma.array(averages, mask=np.isnan(averages))
+#my_cmap.set_bad(color=empty_color_avgs)
+
+#im_averages=plt.imshow(averages,cmap=my_cmap,vmin=data_min,vmax=data_max,interpolation=interpolation_setting, extent=[0,nz,0,ny])#or bilinear, nearest, bicubic
+#plt.colorbar(im_averages,orientation='vertical')
 
 #Beautify the axes and ticks, get them to conform to standard reference
 plot_refs(plt,ny,nz)

@@ -804,7 +804,7 @@ int main(int argc, char **argv) {
 	printf("%-15s \t %.4lf\n","g",g);
 	printf("%-15s \t %d\n","simulation steps",steps);
 	printf("%-15s \t %d\n","equilibration steps",equilibration_time);
-	printf("%-15s \t %.0lfx%.0lfx%.0lf \n","grid",L/a,L/a,Lx/a);
+	printf("%-15s \t %.0lfx%.0lfx%.0lf \n","grid",Lx/a,L/a,L/a);
 	printf("%-15s \t %.2lfx%.2lfx%.2lf\n","simulation box",Lx,L,L);
 	// export hydrodynamic numbers?
 		

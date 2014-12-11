@@ -55,7 +55,7 @@ echo "COMPLETED. Add comments on this archived data by editing $file"
 
 ###############################################################################
 #NOTES
-i#f [ rm $origin_directory* ]; then
+#if [ rm $origin_directory* ]; then
 #		echo "Files removed from "$origin_directory
 #	else
 #		echo "Too many files in "$origin_directory", removing one by one:"

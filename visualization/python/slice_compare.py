@@ -1,7 +1,8 @@
 # This script calculates (SAM average - CAM average) and plots it in the same way that either average is plotted
 #
 # Run this from the python directory with:
-# >> python slice_compare.py <Name of SAM averaged file in /experiments directory, with extension> <Name of CAM averaged file in /experiments directory, with extension> <(optional) name of output image, without extension>
+# >> python slice_compare.py <Name of SAM averaged file in /experiments directory, with extension> <Name of CAM averaged file in /experiments directory, 
+#	with extension> <(optional) name of output image, without extension>
 # If the name for the output plot is omitted, the result is saved as "output_compare.pdf"
 #
 
@@ -16,6 +17,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 #On PdfPages:
 #http://stream.princeton.edu/AWCM/LIBRARIES/matplotlib-1.3.0/lib/matplotlib/backends/backend_pdf.py        
         
+        
+#Get the radial helpers
+sys.path.insert(0, './../../statistics/')
+import radial_helpers
+
 # Auxiliary functions
 def plot_refs(plt,ny,nz):
 	#Beautify the axes and ticks, get them to conform to standard reference
@@ -39,12 +45,12 @@ interpolation_setting='nearest' #also possible: bilinear, bicubic
                
 # check number of calling arguments
 if len(sys.argv)<3:
-	print "call as: \n>>python slice_compare.py <name of SAM file in /experiments> <name of CAM file in /experiments> <(optional) name output file, without extension>\n"
+	print "call as: \n>>python slice_compare.py <dir, relative to calling directory> <name of SAM file in /experiments> <name of CAM file in /experiments> <(optional) name output file, without extension>\n"
 	sys.exit(1)
 	
 	
 #define input and output directory
-input_dir = './../../experiments/'
+input_dir = sys.argv[1] #'./../../experiments/'
 output_dir = input_dir
 
 # Define color of empty cells
@@ -52,20 +58,20 @@ empty_color_diff='gray'
 empty_color_avgs='white'
 
 #get header
-if sys.argv[1]!='':
+if sys.argv[2]!='':
 	
-	input_file_sam = input_dir + sys.argv[1];
-	input_file_cam = input_dir + sys.argv[2];
+	input_file_sam = input_dir + sys.argv[2];
+	input_file_cam = input_dir + sys.argv[3];
 	
 	fh_sam=open(input_file_sam,'r')
 	#fh_cam=open(input_file_cam,'r') # currently the script does not check that the sam and cam data have been obtained from the same raw datafiles.
 	
-	if len(sys.argv)==4:
-		outputname=sys.argv[3]+".pdf" #change format if needed
-		print "Plots will be saved as " + outputname + ", cam_" + outputname + ", and sam_" + outputname
+	if len(sys.argv)==5:
+		outputname=sys.argv[4]+".pdf" #change format if needed
+		print "Plots will be saved as " + outputname + ", cam_" + outputname + ", sam_" + outputname + ', and diffradavg_' + outputname
 	else:
 		outputname="output_compare.pdf"
-		print "Plots will be saved as output_compare.pdf, cam_output_compare.pdf and sam_output_compare.pdf"
+		print "Plots will be saved as output_compare.pdf, cam_output_compare.pdf, sam_output_compare.pdf and diffradavg_output_compare.pdf"
 	print "In ", output_dir
 else:
 	print "Call as: python slice_compare.py <name of SAM av file> <name of CAM av file> <name of output plot, without the extension>"
@@ -105,10 +111,10 @@ if np.nanmax(averages_cam) > my_vmax:
 	my_vmax = np.nanmax(averages_cam)	
 
 #calculate difference
-difference=np.subtract(averages_sam,averages_cam)
+difference_1d=np.subtract(averages_sam,averages_cam)
 
 #prepare data for plotting
-difference = difference.reshape(ny,nz)
+difference = difference_1d.reshape(ny,nz)
 averages_cam = averages_cam.reshape(ny,nz)
 averages_sam = averages_sam.reshape(ny,nz)
 
@@ -141,7 +147,7 @@ plt.savefig( pdffig, format="pdf")
 
 #add metadata to figure
 metadata = pdffig.infodict()
-metadata['Title'] = 'Data plotted (2nd column) = difference ' + sys.argv[1] +' [MINUS] '+ sys.argv[2] #input_file_sam, input_file_cam
+metadata['Title'] = 'Data plotted (2nd column) = difference ' + sys.argv[1]+sys.argv[2] +' [MINUS] '+sys.argv[1] +sys.argv[3] #input_file_sam, input_file_cam
 metadata['Author'] = 'Script used to plot this = slice_compare.py'
 metadata['Subject']= 'Info on CAM and SAM avgs plotted in cam_'+outputname+' and sam_'+outputname
 metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
@@ -149,9 +155,66 @@ metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ',
 #metadata['Producer']=
 pdffig.close()
 
+
+##########################################
+#Radial average of comparison plot
+
+#Get radial average points
+y_values = []
+x_vals = []
+num_points = 7*ny;
+a = 1.0;  #<--------------------------------------------------------------------THIS SHOULD BE GIVEN AS A PARAMETER
+L = ny*a;
+L_half = 0.5*L;
+R = 0.5*(L-a);
+
+for i in range(0,num_points):
+	radius = a + i*(R-a)/(1.0*num_points-1.0);
+	x_vals.insert(0,L_half-radius)
+	x_vals.append(L_half+radius)
+	lengths = radial_helpers.find_seg_quant(a,L,ny,nz,radius,'length')
+	warray=radial_helpers.find_weights(lengths,radius)
+	y_values.append(   np.dot( np.nan_to_num(difference_1d)  ,  warray )   )
+y_vals=np.concatenate((y_values[::-1],y_values))
+
+
+#Plot
+plt.figure(2)
+plt.plot(x_vals,y_vals, 'ro', markersize=3)
+fig=plt.gcf()
+ax=fig.gca()
+
+y_m = y_vals.min()
+y_M = y_vals.max()
+
+ax.set_ylim([0.9*y_m,1.1*y_M])
+plt.vlines(range(0,ny,1),0.9*y_m,1.1*y_M)
+plt.vlines([0.5,ny-0.5],0.9*y_m,1.1*y_M,'g')
+ax.set_xlim(ax.get_xlim()[::-1]) 
+
+
+ax.set_xlabel('Y (cells)',fontweight="bold")
+ax.set_ylabel('v_x(SAM)-v_x(CAM)',fontweight="bold") #Latex?		
+
+#save averages plot to disk, prepare metadata object first
+pdffig = PdfPages( output_dir + 'diffradavg_' + outputname )
+plt.savefig( pdffig, format="pdf")
+
+#add metadata to figure
+metadata = pdffig.infodict()
+metadata['Title'] = 'Data plotted is radial average of SAM - CAM velocity averages'
+metadata['Author'] = 'Script used to plot this = slice_compare.py.py and radial_helpers.py'
+metadata['Subject']= ' Datafiles: '+input_file_sam + ' , '+input_file_cam
+#metadata['Keywords']= ''
+#metadata['Creator'] = 
+#metadata['Producer']=
+
+#Save figure
+pdffig.close()
+
 #========================================
 #auxiliary plot 1/2 (SAM data only)
-plt.figure(2)
+plt.figure(3)
 
 # plot empty cells in a pre-determined color
 my_cmap=plt.get_cmap('jet') #Also interesting: jet, spectral, rainbow 
@@ -169,7 +232,7 @@ plt.savefig( pdffig_sam, format="pdf" )
 
 #add metadata to figure
 metadata = pdffig_sam.infodict()
-metadata['Title'] = 'Data plotted (2nd column) =' + sys.argv[1] #input_file_sam
+metadata['Title'] = 'Data plotted (2nd column) =' + sys.argv[1]+sys.argv[2] #input_file_sam
 metadata['Author'] = 'Script used to plot this = slice_compare.py'
 metadata['Subject']= 'Info on corresponding CAM avg plotted in cam_'+outputname+', difference in '+ outputname
 metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
@@ -180,7 +243,7 @@ pdffig_sam.close()
 
 #========================================
 #auxiliary plot 2/2 (CAM data only)
-plt.figure(3)
+plt.figure(4)
 
 # plot empty cells in a pre-determined color
 my_cmap=plt.get_cmap('jet') #Also interesting: jet, spectral, rainbow 
@@ -199,7 +262,7 @@ plt.savefig( pdffig_cam , format="pdf")
 
 #add metadata to figure
 metadata = pdffig_cam.infodict()
-metadata['Title'] = 'Data plotted (2nd column) =' + sys.argv[2] #input_file_cam
+metadata['Title'] = 'Data plotted (2nd column) =' + sys.argv[1]+sys.argv[3] #input_file_cam
 metadata['Author'] = 'Script used to plot this = slice_compare.py'
 metadata['Subject']= 'Info on corresponding SAM avg plotted in sam_'+outputname+', difference in '+ outputname
 metadata['Keywords']= 'If data is an average, first_file='+ str(first_file) + ', last_file=' + str(last_file) + ', stride=' + str(stride)
