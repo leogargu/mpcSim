@@ -102,8 +102,8 @@ num_particles = data.values[:,0];
 #Get radial average points
 y_values = []
 x_vals = []
-for i in range(0,num_points):
-	radius = a + i*(R-a)/(1.0*num_points-1.0);
+for i in range(1,num_points+1):
+	radius =  i*R/(1.0*num_points); #a + i*(R-a)/(1.0*num_points-1.0);
 	x_vals.insert(0,L_half-radius)
 	x_vals.append(L_half+radius)
 	lengths = radial_helpers.find_seg_quant(a,L,ny,nz,radius,'length')
@@ -139,6 +139,8 @@ y1=y_vals.max()
 ax.set_ylim([0,1.1*y1])
 plt.vlines(range(0,ny,1),0,1.1*y1)
 plt.vlines([0.5,ny-0.5],0,1.1*y1,'g')
+plt.vlines([ny*0.5],0,1.1*y1,'g',linestyle='dashed');
+ax.set_xlim([0,L]);
 ax.set_xlim(ax.get_xlim()[::-1]) 
 
 
@@ -179,8 +181,9 @@ particle_densities = np.divide(num_particles_cell, volumes)
 y_values = []
 x_vals = []
 num_points *= 3
+a_half=0.5*a;
 for i in range(1,num_points+1):
-	radius = i*R/(1.0*num_points);
+	radius =  i*R/(1.0*num_points);#a_half + i*(R-a_half)/(1.0*num_points);#i*R/(1.0*num_points);
 	x_vals.insert(0,L_half-radius)
 	x_vals.append(L_half+radius)
 	lengths = radial_helpers.find_seg_quant(a,L,ny,nz,radius,'length')
@@ -200,6 +203,8 @@ y1=yaux*1.8
 ax.set_ylim([0,1.1*y1])
 plt.vlines(range(0,ny,1),0,1.1*y1)
 plt.vlines([0.5,ny-0.5],0,1.1*y1,'g')
+plt.vlines([ny*0.5],0,1.1*y1,'g',linestyle='dashed');
+ax.set_xlim([0,L])
 ax.set_xlim(ax.get_xlim()[::-1]) 
 
 
