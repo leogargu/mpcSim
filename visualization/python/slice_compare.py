@@ -45,7 +45,7 @@ interpolation_setting='nearest' #also possible: bilinear, bicubic
                
 # check number of calling arguments
 if len(sys.argv)<3:
-	print "call as: \n>>python slice_compare.py <dir, relative to calling directory> <name of SAM file in /experiments> <name of CAM file in /experiments> <(optional) name output file, without extension>\n"
+	print "call as: \n>>python slice_compare.py <dir, relative to calling directory> <name of SAM file> <name of CAM file> <(optional) name output file, without extension>\n"
 	sys.exit(1)
 	
 	
