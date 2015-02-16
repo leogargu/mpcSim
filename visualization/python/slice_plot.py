@@ -77,7 +77,7 @@ if len(sys.argv)>=4 and sys.argv[2]!='':
 		outputname_densities="output_density.pdf"
 		print "Plots will be saved in output.pdf, output_samples.pdf, output_density.pdf\n"
 else:
-	print "Call as: \n>>python slice_plot.py <dir> <name of av file to plot, in /experiments> <value of a> <(optional) name of output plot, without the extension>"
+	print "Call as: \n>>python slice_plot.py <dir> <name of av file to plot> <value of a> <(optional) name of output plot, without the extension>"
 	sys.exit(1)
 	
 	
@@ -225,7 +225,7 @@ if 'CAM' in sys.argv[2]:
 	plot_refs(plt,ny,nz)
 
 	# Save sample statistics plot to disk
-	pdffig_density = PdfPages( output_dir + sys.argv[4]+"_particle_density.pdf" )
+	pdffig_density = PdfPages( output_dir +outputname[:-4]+"_particle_density.pdf" )
 	plt.savefig( pdffig_density, format="pdf" )
 
 	#add metadata to figure

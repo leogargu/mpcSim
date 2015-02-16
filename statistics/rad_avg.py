@@ -172,12 +172,12 @@ pdffig.close()
 #Now the particle densities
 plt.figure(2)
 
-if "CAM" in input_file:
+if ("CAM" in input_file) or ( "cam" in input_file):
 	volumes = radial_helpers.find_seg_quant(a,L,ny,nz,R,'volume')	
 	num_particles_cell = np.divide(num_particles,num_samples)
 	particle_densities = np.divide(num_particles_cell, volumes)
 else:#SAM average
-	particle_densities = num_particles
+	particle_densities = data.values[:,0]# num_particles
 	
 #Get radial average points
 y_values = []
@@ -199,6 +199,7 @@ fig=plt.gcf()
 ax=fig.gca()
 
 yaux=y_vals.mean()
+print "Avg density: ", yaux
 y1=yaux*1.8
 
 #y1=y_vals.max()
@@ -211,7 +212,7 @@ ax.set_xlim(ax.get_xlim()[::-1])
 
 
 ax.set_xlabel('Y (cells)',fontweight="bold")
-if "CAM" in input_file:
+if ("CAM" in input_file) or ( "cam" in input_file):
 	ax.set_ylabel('particle density',fontweight="bold") #Latex?
 else:#else, it is a SAM file
 	ax.set_ylabel('number of samples used',fontweight='bold')
@@ -227,7 +228,7 @@ metadata = pdffig.infodict()
 metadata['Title'] = 'Data plotted =' + input_dir + input_file #input_file 
 metadata['Author'] = 'Script used to plot this = rad_avg.py.py and radial_helpers.py'
 
-if "CAM" in input_file:
+if ("CAM" in input_file) or ( "cam" in input_file):
 	metadata['Subject']= ' Radial averages of the particle density '
 else:
 	metadata['Subject']= ' Radial average of the number of samples in the SAM average '
