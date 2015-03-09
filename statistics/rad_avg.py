@@ -200,6 +200,7 @@ ax=fig.gca()
 
 yaux=y_vals.mean()
 print "Avg density: ", yaux
+mean_density=yaux;
 y1=yaux*1.8
 
 #y1=y_vals.max()
@@ -232,7 +233,7 @@ if ("CAM" in input_file) or ( "cam" in input_file):
 	metadata['Subject']= ' Radial averages of the particle density '
 else:
 	metadata['Subject']= ' Radial average of the number of samples in the SAM average '
-#metadata['Keywords']= ''
+metadata['Keywords']= 'mean density: '+ str(mean_density)
 #metadata['Creator'] = 
 #metadata['Producer']=
 
